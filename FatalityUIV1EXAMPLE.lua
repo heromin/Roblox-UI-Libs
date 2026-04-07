@@ -1,6 +1,5 @@
 --[[ 
-    PROJECT DELTA - FATALITY V3 REPLICA
-    - UI 100% Auténtica al estilo de la imagen.
+    - FATALITY - HYVERION VERSION
     - Soporte para Sliders, Dropdowns y Toggles Reales.
     - Sistema de Pestañas y Sub-Pestañas con Iconos.
 ]]
@@ -17,7 +16,7 @@ local TweenService = game:GetService("TweenService")
 local VirtualUser = game:GetService("VirtualUser")
 
 -- =========================================================
--- CONFIGURACIÓN DE COLORES (FATALITY V3 EXACTO)
+-- CONFIGURACIÓN DE COLORES
 -- =========================================================
 local Theme = {
     Background = Color3.fromRGB(13, 11, 28), -- Azul muy oscuro
@@ -87,7 +86,9 @@ local Settings = {
         ShowFPS = true,
         ShowPing = true,
         ShowTime = true,
-        ShowUptime = true
+        ShowUptime = true,
+        HideWithMenu = false,
+        ShowWatermark = true
     },
     TargetHUD = {
         Enabled = false
@@ -139,7 +140,9 @@ local Crosshair_Settings = {
     Size = 12, Gap = 5, Thickness = 2, Transparency = 0,
     SpinSpeed = 150, RGB = false,
     Outline = false, OutlineColor = Color3.new(0,0,0),
-    TStyle = false, Dot = false
+    TStyle = false, Dot = false,
+    ShowWatermark = false,
+    WatermarkText = "HYVERION"
 }
 
 local Drawings = {
@@ -156,7 +159,7 @@ FOVCircle.Color = Theme.Accent
 FOVCircle.Transparency = 0.7
 
 -- =========================================================
--- CORE ESP LOGIC (INTEGRATED)
+-- NUCLEO DE LA LOGICA DE EL ESP
 -- =========================================================
 local function IsVisible(part, character)
     if not part or not character then return false end
@@ -431,17 +434,32 @@ CrossGui.IgnoreGuiInset = true
 local CrossMain = Instance.new("Frame", CrossGui)
 CrossMain.Size = UDim2.new(0, 0, 0, 0); CrossMain.Position = UDim2.new(0.5, 0, 0.5, 0); CrossMain.BackgroundTransparency = 1
 
+local CrossSpinner = Instance.new("Frame", CrossMain)
+CrossSpinner.Size = UDim2.new(0, 0, 0, 0); CrossSpinner.BackgroundTransparency = 1
+
 local function CreateLine()
-    local f = Instance.new("Frame", CrossMain); f.BorderSizePixel = 0; f.Visible = false; return f
+    local f = Instance.new("Frame", CrossSpinner); f.BorderSizePixel = 0; f.Visible = false; return f
 end
 
 local Lines = {Top = CreateLine(), Bottom = CreateLine(), Left = CreateLine(), Right = CreateLine(), Dot = CreateLine()}
 local currentRotation = 0
 
+-- Watermark Crosshair
+local CrossWatermark = Instance.new("TextLabel", CrossMain)
+CrossWatermark.BackgroundTransparency = 1
+CrossWatermark.TextColor3 = Theme.Text
+CrossWatermark.Font = Enum.Font.Code
+CrossWatermark.TextSize = 14
+CrossWatermark.TextXAlignment = Enum.TextXAlignment.Center
+CrossWatermark.AnchorPoint = Vector2.new(0.5, 0)
+CrossWatermark.TextStrokeTransparency = 0
+CrossWatermark.Text = Crosshair_Settings.WatermarkText
+CrossWatermark.Visible = false
+
 table.insert(GlobalConnections, RunService.RenderStepped:Connect(function(dt)
     -- Mira (Crosshair)
     if Crosshair_Settings.Spin then currentRotation = currentRotation + (Crosshair_Settings.SpinSpeed * dt) end
-    CrossMain.Rotation = currentRotation
+    CrossSpinner.Rotation = currentRotation
     
     local mousePos = UserInputService:GetMouseLocation()
     CrossMain.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
@@ -485,6 +503,20 @@ table.insert(GlobalConnections, RunService.RenderStepped:Connect(function(dt)
     else
         for _, l in pairs(Lines) do l.Visible = false end
     end
+
+    -- Crosshair Watermark Logica
+    if Crosshair_Settings.ShowWatermark then
+        CrossWatermark.Visible = true
+        CrossWatermark.TextColor3 = color
+        
+        local pulse = (math.sin(tick() * 3) + 1) / 2
+        CrossWatermark.TextTransparency = 0.2 + (pulse * 0.3)
+        
+        CrossWatermark.Text = Crosshair_Settings.WatermarkText
+        local wmOffset = Crosshair_Settings.Gap + Crosshair_Settings.Size + 5
+        CrossWatermark.Position = UDim2.new(0, 0, 0, wmOffset)
+        CrossWatermark.Size = UDim2.new(0, 100, 0, 15)
+    else CrossWatermark.Visible = false end
 end))
 
 -- =========================================================
@@ -611,7 +643,7 @@ table.insert(GlobalConnections, RunService.Stepped:Connect(function()
             end
         end
 
-        -- Float Logic (Momentary Sequence triggered by Toggle)
+        -- Logica de float
         if Settings.Misc.Float or floatState ~= "Idle" then
             local now = tick()
             
@@ -980,6 +1012,7 @@ local function BuildFatalityUI()
         return label
     end
 
+    local iWatermark = CreateIndicator("Watermark")
     local iFPS = CreateIndicator("FPS")
     local iPing = CreateIndicator("Ping")
     local iTime = CreateIndicator("Time")
@@ -987,10 +1020,21 @@ local function BuildFatalityUI()
 
     local lastFPS = 0
     local lastUpdate = tick()
+    local firstPosSet = false
 
     table.insert(GlobalConnections, RunService.RenderStepped:Connect(function()
-        infoMain.Visible = Settings.Indicators.Enabled
-        if not Settings.Indicators.Enabled then return end
+        local shouldShow = Settings.Indicators.Enabled
+        if Settings.Indicators.HideWithMenu and (main == nil or not main.Visible) then
+            shouldShow = false
+        end
+
+        infoMain.Visible = shouldShow
+        if not shouldShow then return end
+        
+        if not firstPosSet and main then
+            infoMain.Position = UDim2.new(main.Position.X.Scale, main.Position.X.Offset - infoMain.Size.X.Offset - 10, main.Position.Y.Scale, main.Position.Y.Offset)
+            firstPosSet = true
+        end
         
         if tick() - lastUpdate >= 0.5 then
             lastFPS = math.floor(1/RunService.RenderStepped:Wait())
@@ -998,6 +1042,11 @@ local function BuildFatalityUI()
         end
 
         local count = 0
+        if Settings.Indicators.ShowWatermark then 
+            iWatermark.Text = "HYVERION | VER 1.0"
+            iWatermark.Visible = true; count = count + 1
+        else iWatermark.Visible = false end
+
         if Settings.Indicators.ShowFPS then 
             iFPS.Text = "FPS: " .. tostring(lastFPS)
             iFPS.Visible = true; count = count + 1
@@ -1216,10 +1265,15 @@ local function BuildFatalityUI()
                 subPage.BackgroundTransparency = 1
                 subPage.Visible = false
                 subPage.ScrollBarThickness = 0
+                subPage.ScrollBarThickness = 2
+                subPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                subPage.CanvasSize = UDim2.new(0, 0, 0, 0)
                 
                 local subLayout = Instance.new("UIListLayout", subPage)
                 subLayout.FillDirection = Enum.FillDirection.Horizontal
                 subLayout.Padding = UDim.new(0, 10)
+                subLayout.Wraps = true
+                subLayout.Padding = UDim.new(0, 8)
 
                 subBtn.MouseButton1Click:Connect(function()
                     for _, sp in pairs(contentFrame:GetChildren()) do if sp:IsA("ScrollingFrame") then sp.Visible = false end end
@@ -1240,6 +1294,7 @@ local function BuildFatalityUI()
                         -- Panel Fatality Style (Como los de la imagen)
                         local col = Instance.new("Frame", subPage)
                         col.Size = UDim2.new(0.33, -7, 0, 20)
+                    col.Size = UDim2.new(0.32, 0, 0, 20)
                         col.AutomaticSize = Enum.AutomaticSize.Y
                         col.BackgroundColor3 = Theme.Panel
                         col.BorderSizePixel = 0
@@ -1270,7 +1325,7 @@ local function BuildFatalityUI()
                         Instance.new("UIListLayout", list).Padding = UDim.new(0, 5)
 
                         return {
-                            AddToggle = function(txt, callback)
+                            AddToggle = function(txt, callback, initial)
                                 local row = Instance.new("Frame", list)
                                 row.Size = UDim2.new(1, -10, 0, 18)
                                 row.BackgroundTransparency = 1
@@ -1279,9 +1334,8 @@ local function BuildFatalityUI()
                                 box.Size = UDim2.new(0, 12, 0, 12)
                                 box.Position = UDim2.new(0, 0, 0.5, -6)
                                 box.BackgroundColor3 = Theme.Background
-                                box.BorderColor3 = Theme.Border
                                 box.Text = ""
-                                
+
                                 local label = Instance.new("TextLabel", row)
                                 label.Size = UDim2.new(1, -20, 1, 0)
                                 label.Position = UDim2.new(0, 20, 0, 0)
@@ -1302,7 +1356,9 @@ local function BuildFatalityUI()
                                 bindBtn.TextSize = 8
                                 Instance.new("UIStroke", bindBtn).Color = Theme.Border
 
-                                local s = false
+                                local s = initial or false
+                                box.BackgroundColor3 = s and Theme.Accent or Theme.Background
+
                                 
                                 ToggleObjects[txt] = {
                                     UpdateVisual = function(val)
@@ -1625,7 +1681,7 @@ local function BuildFatalityUI()
     local AntiaimSub = Rage.AddSubTab("Anti-Aim", "rbxassetid://10619092956")
 
     local AACol = AntiaimSub.AddColumn("Anti-Aim Main")
-    AACol.AddToggle("Enable Anti-Aim", function(v) Settings.Rage.AntiAim = v end)
+    AACol.AddToggle("Enable Anti-Aim", function(v) Settings.Rage.AntiAim = v end, Settings.Rage.AntiAim)
     AACol.AddDropdown("Pitch", {"Down", "Up", "Zero"}, "Down", function(v) Settings.Rage.Pitch = v end)
     AACol.AddDropdown("Yaw", {"Spin", "Backwards", "Jitter"}, "Spin", function(v) Settings.Rage.Yaw = v end)
     
@@ -1637,15 +1693,15 @@ local function BuildFatalityUI()
     local LegitBotSub = Legit.AddSubTab("Legit Bot", "rbxassetid://10619105435")
     
     local LegitAimbotCol = LegitBotSub.AddColumn("Legit Aimbot")
-    LegitAimbotCol.AddToggle("Aimbot Enabled", function(v) Settings.Aimbot.Enabled = v end)
+    LegitAimbotCol.AddToggle("Aimbot Enabled", function(v) Settings.Aimbot.Enabled = v end, Settings.Aimbot.Enabled)
     LegitAimbotCol.AddSlider("Field of View", 1, 360, 30, function(v) Settings.Aimbot.FOV = v end)
     LegitAimbotCol.AddSlider("Smoothing", 1, 100, 15, function(v) Settings.Aimbot.Smoothing = v end)
-    LegitAimbotCol.AddToggle("Visible Check", function(v) Settings.Aimbot.VisibleCheck = v end)
+    LegitAimbotCol.AddToggle("Visible Check", function(v) Settings.Aimbot.VisibleCheck = v end, Settings.Aimbot.VisibleCheck)
 
     local TriggerCol = LegitBotSub.AddColumn("Triggerbot")
-    TriggerCol.AddToggle("Triggerbot Enabled", function(v) Settings.Legit.Triggerbot = v end)
+    TriggerCol.AddToggle("Triggerbot Enabled", function(v) Settings.Legit.Triggerbot = v end, Settings.Legit.Triggerbot)
     TriggerCol.AddSlider("Shot Delay (ms)", 0, 500, 50, function(v) Settings.Legit.TriggerDelay = v end)
-    TriggerCol.AddToggle("Team Check", function(v) Settings.Legit.TriggerTeamCheck = v end)
+    TriggerCol.AddToggle("Team Check", function(v) Settings.Legit.TriggerTeamCheck = v end, Settings.Legit.TriggerTeamCheck)
 
     -- Columna 1 (Auto)
     local ColAuto = AimbotSub.AddColumn("Auto")
@@ -1662,11 +1718,11 @@ local function BuildFatalityUI()
         if v then
             Notify("Rage Aimbot active. This is highly detectable!", Color3.fromRGB(255, 150, 0))
         end
-    end)
-    ColAimbot.AddToggle("Team Check", function(v) Settings.Aimbot.TeamCheck = v end)
-    ColAimbot.AddToggle("Visible Check", function(v) Settings.Aimbot.VisibleCheck = v end)
-    ColAimbot.AddToggle("Prediction", function(v) Settings.Aimbot.Prediction = v end)
-    ColAimbot.AddToggle("Show FOV Circle", function(v) Settings.Aimbot.ShowFOV = v end)
+    end, Settings.Aimbot.Enabled)
+    ColAimbot.AddToggle("Team Check", function(v) Settings.Aimbot.TeamCheck = v end, Settings.Aimbot.TeamCheck)
+    ColAimbot.AddToggle("Visible Check", function(v) Settings.Aimbot.VisibleCheck = v end, Settings.Aimbot.VisibleCheck)
+    ColAimbot.AddToggle("Prediction", function(v) Settings.Aimbot.Prediction = v end, Settings.Aimbot.Prediction)
+    ColAimbot.AddToggle("Show FOV Circle", function(v) Settings.Aimbot.ShowFOV = v end, Settings.Aimbot.ShowFOV)
     ColAimbot.AddToggle("Double tap", function(v) end)
 
     ColAimbot.AddDropdown("Aimbot Method", {"Mouse", "Camera"}, "Mouse", function(v) Settings.Aimbot.Method = v end)
@@ -1675,24 +1731,24 @@ local function BuildFatalityUI()
     -- Pestaña Visuals Reorganizada
     local PlayersSub = Visuals.AddSubTab("Players", "rbxassetid://10619091632")
     local EspCol = PlayersSub.AddColumn("Main ESP")
-    EspCol.AddToggle("Enabled", function(v) Settings.ESP.Enabled = v end)
-    EspCol.AddToggle("Team Check", function(v) Settings.ESP.TeamCheck = v end)
+    EspCol.AddToggle("Enabled", function(v) Settings.ESP.Enabled = v end, Settings.ESP.Enabled)
+    EspCol.AddToggle("Team Check", function(v) Settings.ESP.TeamCheck = v end, Settings.ESP.TeamCheck)
     
     local VisCol = PlayersSub.AddColumn("Visuals")
-    VisCol.AddToggle("Boxes", function(v) Settings.ESP.Boxes = v end)
-    VisCol.AddToggle("Names", function(v) Settings.ESP.Names = v end)
+    VisCol.AddToggle("Boxes", function(v) Settings.ESP.Boxes = v end, Settings.ESP.Boxes)
+    VisCol.AddToggle("Names", function(v) Settings.ESP.Names = v end, Settings.ESP.Names)
     VisCol.AddSlider("Text Size", 10, 24, 13, function(v) Settings.ESP.TextSize = v end)
     VisCol.AddSlider("Box Thickness", 1, 5, 1, function(v) Settings.ESP.BoxThickness = v end)
     VisCol.AddSlider("Skeleton Thickness", 1, 5, 1, function(v) Settings.ESP.SkeletonThickness = v end)
     VisCol.AddSlider("Tracer Thickness", 1, 5, 1, function(v) Settings.ESP.TracerThickness = v end)
-    VisCol.AddToggle("Show Distance", function(v) Settings.ESP.ShowDistance = v end)
+    VisCol.AddToggle("Show Distance", function(v) Settings.ESP.ShowDistance = v end, Settings.ESP.ShowDistance)
     VisCol.AddDropdown("Distance Unit", {"studs", "meters"}, "studs", function(v) Settings.ESP.DistanceUnit = v end)
     VisCol.AddSlider("Max Distance", 100, 5000, 2000, function(v) Settings.ESP.MaxDistance = v end)
-    VisCol.AddToggle("Health Bar", function(v) Settings.ESP.Health = v end)
-    VisCol.AddToggle("Health Text", function(v) Settings.ESP.HealthText = v end)
-    VisCol.AddToggle("Tracers", function(v) Settings.ESP.Tracers = v end)
-    VisCol.AddToggle("Target HUD", function(v) Settings.TargetHUD.Enabled = v end)
-    VisCol.AddToggle("Skeleton", function(v) Settings.ESP.Skeleton = v end)
+    VisCol.AddToggle("Health Bar", function(v) Settings.ESP.Health = v end, Settings.ESP.Health)
+    VisCol.AddToggle("Health Text", function(v) Settings.ESP.HealthText = v end, Settings.ESP.HealthText)
+    VisCol.AddToggle("Tracers", function(v) Settings.ESP.Tracers = v end, Settings.ESP.Tracers)
+    VisCol.AddToggle("Target HUD", function(v) Settings.TargetHUD.Enabled = v end, Settings.TargetHUD.Enabled)
+    VisCol.AddToggle("Skeleton", function(v) Settings.ESP.Skeleton = v end, Settings.ESP.Skeleton)
 
     local ColorCol = PlayersSub.AddColumn("ESP Colors")
     ColorCol.AddColorPicker("Enemy Color", Settings.ESP.EnemyColor, function(c) Settings.ESP.EnemyColor = c end)
@@ -1703,7 +1759,7 @@ local function BuildFatalityUI()
     WorldCol.AddToggle("Nightmode", function(v) 
         Settings.World.Nightmode = v
         Lighting.ClockTime = v and 0 or 12
-    end)
+    end, Settings.World.Nightmode)
     WorldCol.AddSlider("Brightness", 0, 100, 100, function(v) 
         Settings.World.Brightness = v
         Lighting.Brightness = v / 50
@@ -1711,11 +1767,11 @@ local function BuildFatalityUI()
     WorldCol.AddToggle("Fullbright", function(v) 
         Settings.World.Fullbright = v
         Lighting.Ambient = v and Color3.new(1,1,1) or OldLighting.Ambient
-    end)
+    end, Settings.World.Fullbright)
     WorldCol.AddToggle("No Fog", function(v) 
         Settings.World.NoFog = v
         Lighting.FogEnd = v and 9e9 or OldLighting.FogEnd
-    end)
+    end, Settings.World.NoFog)
     WorldCol.AddButton("Optimize Roblox", function()
         Lighting.GlobalShadows = false
         Lighting.FogEnd = 9e9
@@ -1728,65 +1784,66 @@ local function BuildFatalityUI()
 
     local CrossSub = Visuals.AddSubTab("Crosshair", "rbxassetid://6034287535")
     local CrossCol = CrossSub.AddColumn("Custom Crosshair")
-    CrossCol.AddToggle("Enabled", function(v) Crosshair_Settings.Enabled = v end)
-    CrossCol.AddToggle("Spin", function(v) Crosshair_Settings.Spin = v end)
-    CrossCol.AddToggle("RGB Effect", function(v) Crosshair_Settings.RGB = v end)
+    CrossCol.AddToggle("Enabled", function(v) Crosshair_Settings.Enabled = v end, Crosshair_Settings.Enabled)
+    CrossCol.AddToggle("Spin", function(v) Crosshair_Settings.Spin = v end, Crosshair_Settings.Spin)
+    CrossCol.AddToggle("RGB Effect", function(v) Crosshair_Settings.RGB = v end, Crosshair_Settings.RGB)
     CrossCol.AddSlider("Spin Speed", 0, 500, 150, function(v) Crosshair_Settings.SpinSpeed = v end)
     CrossCol.AddSlider("Transparency", 0, 100, 0, function(v) Crosshair_Settings.Transparency = v / 100 end)
     CrossCol.AddSlider("Size", 1, 50, 12, function(v) Crosshair_Settings.Size = v end)
     CrossCol.AddSlider("Gap", 0, 20, 5, function(v) Crosshair_Settings.Gap = v end)
     CrossCol.AddSlider("Thickness", 1, 10, 2, function(v) Crosshair_Settings.Thickness = v end)
-    CrossCol.AddToggle("Outline", function(v) Crosshair_Settings.Outline = v end)
+    CrossCol.AddToggle("Show Watermark", function(v) Crosshair_Settings.ShowWatermark = v end, Crosshair_Settings.ShowWatermark)
+    CrossCol.AddToggle("Outline", function(v) Crosshair_Settings.Outline = v end, Crosshair_Settings.Outline)
     CrossCol.AddColorPicker("Outline Color", Crosshair_Settings.OutlineColor, function(v) Crosshair_Settings.OutlineColor = v end)
-    CrossCol.AddToggle("T-Style", function(v) Crosshair_Settings.TStyle = v end)
-    CrossCol.AddToggle("Dot", function(v) Crosshair_Settings.Dot = v end)
+    CrossCol.AddToggle("T-Style", function(v) Crosshair_Settings.TStyle = v end, Crosshair_Settings.TStyle)
+    CrossCol.AddToggle("Dot", function(v) Crosshair_Settings.Dot = v end, Crosshair_Settings.Dot)
 
     -- Misc Tab
     local MiscSub = Misc.AddSubTab("Main", "rbxassetid://10619093761")
     local MoveCol = MiscSub.AddColumn("Movement")
     
-    MoveCol.AddToggle("Safety Protection", function(v) Settings.Misc.AntiCheatDetection = v end)
-    MoveCol.AddToggle("Bhop", function(v) Settings.Misc.Bhop = v end)
-    MoveCol.AddToggle("Auto-strafe", function(v) Settings.Misc.Autostrafe = v end)
+    MoveCol.AddToggle("Safety Protection", function(v) Settings.Misc.AntiCheatDetection = v end, Settings.Misc.AntiCheatDetection)
+    MoveCol.AddToggle("Bhop", function(v) Settings.Misc.Bhop = v end, Settings.Misc.Bhop)
+    MoveCol.AddToggle("Auto-strafe", function(v) Settings.Misc.Autostrafe = v end, Settings.Misc.Autostrafe)
     MoveCol.AddToggle("Fly (HIGH RISK)", function(v) 
         Settings.Misc.Fly = v 
         if v then
             Notify("Fly enabled. Use with extreme caution!", Color3.fromRGB(255, 150, 0))
         end
-    end)
+    end, Settings.Misc.Fly)
     MoveCol.AddSlider("Fly Speed", 1, 200, 50, function(v) Settings.Misc.FlySpeed = v end)
     
-    MoveCol.AddToggle("Float (RISKY)", function(v) Settings.Misc.Float = v end)
+    MoveCol.AddToggle("Float (RISKY)", function(v) Settings.Misc.Float = v end, Settings.Misc.Float)
     MoveCol.AddSlider("Float Ascent (0.1s)", 0, 9, 4, function(v) Settings.Misc.FloatAscent = v / 10 end)
     MoveCol.AddSlider("Float Hover (0.1s)", 0, 9, 4, function(v) Settings.Misc.FloatHover = v / 10 end)
     MoveCol.AddSlider("Float Cooldown", 1, 10, 3, function(v) Settings.Misc.FloatCooldown = v end)
     
-    MoveCol.AddToggle("Spider", function(v) Settings.Misc.Spider = v end)
-    MoveCol.AddToggle("Silent Walk", function(v) Settings.Misc.SilentWalk = v end)
+    MoveCol.AddToggle("Spider", function(v) Settings.Misc.Spider = v end, Settings.Misc.Spider)
+    MoveCol.AddToggle("Silent Walk", function(v) Settings.Misc.SilentWalk = v end, Settings.Misc.SilentWalk)
 
     MoveCol.AddToggle("Speed Hack (RISKY)", function(v) 
         Settings.Misc.SpeedHack = v 
         if v then
             Notify("Speed Hack enabled. Use with extreme caution!", Color3.fromRGB(255, 100, 0))
         end
-    end)
+    end, Settings.Misc.SpeedHack)
     MoveCol.AddSlider("Speed Value", 16, 200, 16, function(v) Settings.Misc.SpeedValue = v end)
     MoveCol.AddToggle("Noclip (HIGH RISK)", function(v) 
         Settings.Misc.Noclip = v 
         if v then
             Notify("Noclip is active. High ban risk detected!", Color3.fromRGB(255, 50, 0))
         end
-    end)
+    end, Settings.Misc.Noclip)
     MoveCol.AddToggle("Infinite Jump", function(v) 
         Settings.Misc.InfiniteJump = v 
         if v then
             Notify("Infinite Jump active. May flag some anti-cheats.", Color3.fromRGB(255, 200, 0))
         end
-    end)
+    end, Settings.Misc.InfiniteJump)
     MoveCol.AddButton("Warning: Use at your own risk", function() end)
 
     local OtherCol = MiscSub.AddColumn("Other")
-    OtherCol.AddToggle("Anti-AFK", function(v) Settings.Misc.AntiAFK = v end)
+    OtherCol.AddToggle("Anti-AFK", function(v) Settings.Misc.AntiAFK = v end, Settings.Misc.AntiAFK)
     OtherCol.AddButton("Server Hop", function() 
         game:GetService("TeleportService"):Teleport(game.PlaceId, Players.LocalPlayer)
     end)
@@ -1910,14 +1967,16 @@ local function BuildFatalityUI()
     MenuCol.AddToggle("Menu Visibility", function(v)
         main.Visible = not main.Visible
         CrossGui.Enabled = main.Visible
-    end)
+    end, true)
 
     local IndCol = SettingsSub.AddColumn("Indicators")
-    IndCol.AddToggle("Global Enabled", function(v) Settings.Indicators.Enabled = v end)
-    IndCol.AddToggle("Show FPS", function(v) Settings.Indicators.ShowFPS = v end)
-    IndCol.AddToggle("Show Ping", function(v) Settings.Indicators.ShowPing = v end)
-    IndCol.AddToggle("Show Time", function(v) Settings.Indicators.ShowTime = v end)
-    IndCol.AddToggle("Show Uptime", function(v) Settings.Indicators.ShowUptime = v end)
+    IndCol.AddToggle("Global Enabled", function(v) Settings.Indicators.Enabled = v end, Settings.Indicators.Enabled)
+    IndCol.AddToggle("Hide with Menu", function(v) Settings.Indicators.HideWithMenu = v end, Settings.Indicators.HideWithMenu)
+    IndCol.AddToggle("Show Watermark", function(v) Settings.Indicators.ShowWatermark = v end, Settings.Indicators.ShowWatermark)
+    IndCol.AddToggle("Show FPS", function(v) Settings.Indicators.ShowFPS = v end, Settings.Indicators.ShowFPS)
+    IndCol.AddToggle("Show Ping", function(v) Settings.Indicators.ShowPing = v end, Settings.Indicators.ShowPing)
+    IndCol.AddToggle("Show Time", function(v) Settings.Indicators.ShowTime = v end, Settings.Indicators.ShowTime)
+    IndCol.AddToggle("Show Uptime", function(v) Settings.Indicators.ShowUptime = v end, Settings.Indicators.ShowUptime)
 end
 
 BuildFatalityUI()

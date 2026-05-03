@@ -61,77 +61,96 @@ local InvList = InventorySection:Listbox({
     List = {},
     Size = 250
 });
--- Standalone Inventory UI
-local InvViewerGui = Instance.new("ScreenGui", gethui())
-InvViewerGui.Name = "Inari_InvViewer"
-InvViewerGui.Enabled = false
 
-local InvMainFrame = Instance.new("Frame", InvViewerGui)
-InvMainFrame.Name = "MainFrame"
-InvMainFrame.Size = UDim2.new(0, 185, 0, 230)
-InvMainFrame.Position = UDim2.new(0, 20, 0.5, -175)
-InvMainFrame.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
-InvMainFrame.BorderSizePixel = 0
+-- Unified Target Info UI (Combined Stats & Inventory)
+local TargetInfoGui = Instance.new("ScreenGui", gethui())
+TargetInfoGui.Name = "Inari_TargetInfo"
+TargetInfoGui.Enabled = false
 
-local InvShadow = Instance.new("ImageLabel", InvMainFrame)
-InvShadow.Name = "Shadow"
-InvShadow.AnchorPoint = Vector2.new(0.5, 0.5)
-InvShadow.BackgroundTransparency = 1
-InvShadow.Position = UDim2.new(0.5, 0, 0.5, 0)
-InvShadow.Size = UDim2.new(1, 40, 1, 40)
-InvShadow.ZIndex = 0
-InvShadow.Image = "rbxassetid://1316045217"
-InvShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-InvShadow.ImageTransparency = 0.5
-InvShadow.ScaleType = Enum.ScaleType.Slice
-InvShadow.SliceCenter = Rect.new(10, 10, 118, 118)
+local MainFrame = Instance.new("Frame", TargetInfoGui)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 180, 0, 220)
+MainFrame.Position = UDim2.new(0.5, 200, 0.5, -110)
+MainFrame.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
+MainFrame.BorderSizePixel = 0
 
-local InvStroke = Instance.new("UIStroke", InvMainFrame)
-InvStroke.Color = Color3.fromRGB(34, 34, 34)
-InvStroke.Thickness = 1
+local MainShadow = Instance.new("ImageLabel", MainFrame)
+MainShadow.Name = "Shadow"
+MainShadow.AnchorPoint = Vector2.new(0.5, 0.5)
+MainShadow.BackgroundTransparency = 1
+MainShadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainShadow.Size = UDim2.new(1, 40, 1, 40)
+MainShadow.ZIndex = 0
+MainShadow.Image = "rbxassetid://1316045217"
+MainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+MainShadow.ImageTransparency = 0.5
+MainShadow.ScaleType = Enum.ScaleType.Slice
+MainShadow.SliceCenter = Rect.new(10, 10, 118, 118)
 
-local InvTitleBar = Instance.new("Frame", InvMainFrame)
-InvTitleBar.Name = "TitleBar"
-InvTitleBar.Size = UDim2.new(1, 0, 0, 32)
-InvTitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-InvTitleBar.BorderSizePixel = 0
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = Color3.fromRGB(34, 34, 34)
+MainStroke.Thickness = 1
 
-local InvTitleFill = Instance.new("Frame", InvTitleBar)
-InvTitleFill.Size = UDim2.new(1, 0, 0, 10)
-InvTitleFill.Position = UDim2.new(0, 0, 1, -10)
-InvTitleFill.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-InvTitleFill.BorderSizePixel = 0
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 26)
+TitleBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+TitleBar.BorderSizePixel = 0
 
-local InvTitle = Instance.new("TextLabel", InvTitleBar)
-InvTitle.Size = UDim2.new(1, -10, 1, 0)
-InvTitle.Position = UDim2.new(0, 10, 0, 0)
-InvTitle.BackgroundTransparency = 1
-InvTitle.TextColor3 = Color3.fromRGB(225, 227, 229)
-InvTitle.TextSize = 13
-InvTitle.Font = Enum.Font.GothamBold
-InvTitle.Text = "INVENTORY"
-InvTitle.TextXAlignment = Enum.TextXAlignment.Left
+local TitleLabel = Instance.new("TextLabel", TitleBar)
+TitleLabel.Size = UDim2.new(1, -10, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.TextColor3 = Color3.fromRGB(225, 227, 229)
+TitleLabel.TextSize = 12
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "TARGET INFO"
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local InvLiner = Instance.new("Frame", InvTitleBar)
-InvLiner.Size = UDim2.new(1, 0, 0, 1)
-InvLiner.Position = UDim2.new(0, 0, 1, 0)
-InvLiner.BackgroundColor3 = Color3.fromRGB(131, 194, 242)
-InvLiner.BorderSizePixel = 0
+local MainLiner = Instance.new("Frame", TitleBar)
+MainLiner.Size = UDim2.new(1, 0, 0, 1)
+MainLiner.Position = UDim2.new(0, 0, 1, 0)
+MainLiner.BackgroundColor3 = Color3.fromRGB(131, 194, 242)
+MainLiner.BorderSizePixel = 0
 
-local InvScroll = Instance.new("ScrollingFrame", InvMainFrame)
-InvScroll.Size = UDim2.new(1, -10, 1, -42)
-InvScroll.Position = UDim2.new(0, 5, 0, 38)
+local StatsContainer = Instance.new("Frame", MainFrame)
+StatsContainer.Name = "Stats"
+StatsContainer.Size = UDim2.new(1, -10, 0, 55)
+StatsContainer.Position = UDim2.new(0, 5, 0, 30)
+StatsContainer.BackgroundTransparency = 1
+
+local StatsLayout = Instance.new("UIListLayout", StatsContainer)
+StatsLayout.Padding = UDim.new(0, 2)
+StatsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local function CreateStatsLabel(text)
+    local l = Instance.new("TextLabel", StatsContainer)
+    l.Size = UDim2.new(1, 0, 0, 12)
+    l.BackgroundTransparency = 1
+    l.TextColor3 = Color3.fromRGB(200, 200, 200)
+    l.TextSize = 10
+    l.Font = Enum.Font.Gotham
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.Text = text
+    return l
+end
+
+local HealthLabel = CreateStatsLabel("HP: 100/100")
+local WeaponLabel = CreateStatsLabel("Tool: None")
+local ExtraLabel = CreateStatsLabel("SPD: 16 | DIST: 0")
+
+local InvScroll = Instance.new("ScrollingFrame", MainFrame)
+InvScroll.Size = UDim2.new(1, -10, 1, -95)
+InvScroll.Position = UDim2.new(0, 5, 0, 90)
 InvScroll.BackgroundTransparency = 1
 InvScroll.BorderSizePixel = 0
 InvScroll.ScrollBarThickness = 2
-InvScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 InvScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 InvScroll.ScrollBarImageColor3 = Color3.fromRGB(131, 194, 242)
 
 local InvLayout = Instance.new("UIGridLayout", InvScroll)
 InvLayout.CellPadding = UDim2.new(0, 4, 0, 4)
-InvLayout.CellSize = UDim2.new(0, 39, 0, 39)
-InvLayout.SortOrder = Enum.SortOrder.LayoutOrder
+InvLayout.CellSize = UDim2.new(0, 37, 0, 37)
 
 local function CreateInvItem(name, iconId)
     local f = Instance.new("Frame", InvScroll)
@@ -162,17 +181,17 @@ end
 
 -- Simple Dragging
 local dragging, dragInput, dragStart, startPos
-InvTitleBar.InputBegan:Connect(function(input)
+TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
-        startPos = InvMainFrame.Position
+        startPos = MainFrame.Position
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
-InvTitleBar.InputChanged:Connect(function(input)
+TitleBar.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         dragInput = input
     end
@@ -180,11 +199,8 @@ end)
 game:GetService("UserInputService").InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
-        InvMainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-    -- if input.UserInputType == Enum.UserInputType.MouseMovement and Tooltip then
-    --     Tooltip.Position = UDim2.new(0, input.Position.X + 10, 0, input.Position.Y + 10)
-    -- end
 end)
 
 InventorySection:Toggle({
@@ -193,6 +209,15 @@ InventorySection:Toggle({
     Default = false,
     Callback = function(Value)
         getgenv().InventoryViewerEnabled = Value
+    end
+});
+
+InventorySection:Toggle({
+    Name = "Target HUD",
+    Flag = "TargetHUDToggle",
+    Default = false,
+    Callback = function(Value)
+        getgenv().TargetHUDEnabled = Value
     end
 });
 
@@ -1622,6 +1647,66 @@ task.spawn(function()
                 InvList:Refresh({})
                 InvViewerGui.Enabled = false
             end
+        end
+    end
+end)
+
+-- Unified Target Info Logic
+local lastInvContent = ""
+task.spawn(function()
+    while task.wait(0.1) do
+        local enabled = getgenv().TargetHUDEnabled or getgenv().InventoryViewerEnabled
+        local targetPart = Functions:GetClosestToMouse()
+        local char = targetPart and targetPart:FindFirstAncestorOfClass("Model")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local plr = char and game.Players:GetPlayerFromCharacter(char)
+
+        if enabled and char and hum then
+            TargetInfoGui.Enabled = true
+            TitleLabel.Text = (plr and plr.Name or char.Name):upper()
+            
+            -- Update Stats
+            if getgenv().TargetHUDEnabled then
+                StatsContainer.Visible = true
+                HealthLabel.Text = string.format("HP: %d/%d", math.round(hum.Health), math.round(hum.MaxHealth))
+                
+                local tool = char:FindFirstChildOfClass("Tool")
+                WeaponLabel.Text = "Tool: " .. (tool and tool.Name or "None")
+                
+                local dist = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("HumanoidRootPart")) and (LocalPlayer.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude or 0
+                ExtraLabel.Text = string.format("SPD: %.1f | DIST: %d", hum.WalkSpeed, math.round(dist))
+            else
+                StatsContainer.Visible = false
+            end
+
+            -- Update Inventory
+            if getgenv().InventoryViewerEnabled then
+                InvScroll.Visible = true
+                local items = Functions:ScanInventory(plr or char)
+                local currentContent = table.concat(items, ",")
+                
+                if currentContent ~= lastInvContent then
+                    lastInvContent = currentContent
+                    for _, v in pairs(InvScroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
+                    for _, itemName in pairs(items) do
+                        CreateInvItem(itemName, getgenv().ItemIcons[itemName])
+                    end
+                    
+                    local displayList = {unpack(items)}
+                    table.insert(displayList, 1, "[" .. TitleLabel.Text .. "]")
+                    InvList:Refresh(displayList)
+                end
+            else
+                InvScroll.Visible = false
+            end
+            
+            -- Adjust Frame Size based on visibility
+            local targetSizeY = 26 + (StatsContainer.Visible and 65 or 0) + (InvScroll.Visible and 130 or 0)
+            MainFrame.Size = UDim2.new(0, 180, 0, targetSizeY)
+            InvScroll.Position = UDim2.new(0, 5, 0, StatsContainer.Visible and 90 or 30)
+        else
+            TargetInfoGui.Enabled = false
+            lastInvContent = ""
         end
     end
 end)

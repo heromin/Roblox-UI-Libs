@@ -520,6 +520,24 @@ do -- Basic elements
             end;
         });
 
+        playerAndContainerSection:Toggle({
+            Name = "Dropped Item ESP",
+            Flag = "DroppedItemESP",
+            Default = false,
+            Callback = function(Value)
+                getgenv().DroppedItemESP = Value
+            end;
+        });
+
+        playerAndContainerSection:Slider({
+            Name = "Dropped Item Render Distance",
+            Min = 100, Max = 2000, Default = 200,
+            Suffix = " studs",
+            Callback = function(Value)
+                getgenv().DroppedItemRenderDistance = Value
+            end;
+        });
+
         combatVisualsSection:Toggle({
             Name = "Bullet Tracers",
             Flag = "BulletTracersToggle",
@@ -1264,6 +1282,50 @@ do
         end)
     end
 
+    function Functions:DrawDroppedItem(Item)
+        if not Item:IsA("Model") or not Item.PrimaryPart then return end
+        local Text = Drawing.new("Text")
+        Text.Center = true; Text.Font = 2; Text.Outline = true; Text.Size = 14; Text.Visible = false
+
+        local conn;
+        conn = RunService.RenderStepped:Connect(function()
+            if not getgenv().DroppedItemESP or not Item.PrimaryPart or not Functions:IsAlive(LocalPlayer) then
+                Text.Visible = false; return
+            end
+
+            local Dist = (Item.PrimaryPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if Dist > (getgenv().DroppedItemRenderDistance or 200) then
+                Text.Visible = false; return
+            end
+
+            local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(Item.PrimaryPart.Position)
+            if not OnScreen then Text.Visible = false; return end
+
+            local itemName = Item:GetAttribute("CallSign") or Item.Name
+            local itemValue = ValueCache[itemName] or 0
+            local Color, Highest = Color3.new(1,1,1), -1
+            for i, v in pairs(ValueSettings) do
+                if itemValue >= i and i > Highest then Color = v; Highest = i end
+            end
+
+            Text.Color = Color
+            Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
+            Text.Text = string.format("%s ($%d)\n%d studs", itemName, itemValue, math.round(Dist))
+            Text.Visible = true
+        end)
+
+        Item.AncestryChanged:Connect(function()
+            if not Item.Parent then Text:Remove(); conn:Disconnect() end
+        end)
+    end
+
+    -- Initialize getgenv().DroppedItemRenderDistance
+    getgenv().DroppedItemRenderDistance = 200
+    getgenv().DroppedItemESP = false
+
+
+
+
     local HitSounds = {
         ["Bell"] = "rbxassetid://137731492025967",
         ["Skeet"] = "rbxassetid://80461265049096",
@@ -1504,6 +1566,18 @@ task.spawn(function()
     end
 end)
 
+-- Dropped Item ESP Initialization
+task.spawn(function()
+    local DroppedItemsFolder = workspace:WaitForChild("DroppedItems", 10)
+    if DroppedItemsFolder then
+        for _, v in pairs(DroppedItemsFolder:GetChildren()) do
+            if v:IsA("Model") and v.PrimaryPart then
+                Functions:DrawDroppedItem(v)
+            end
+        end
+        DroppedItemsFolder.ChildAdded:Connect(function(v) if v:IsA("Model") and v.PrimaryPart then Functions:DrawDroppedItem(v) end end)
+    end
+end)
 -- Inventory Viewer Logic
 local lastInvContent = ""
 local lastTarget = nil

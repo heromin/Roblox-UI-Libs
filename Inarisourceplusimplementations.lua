@@ -545,6 +545,51 @@ do -- Basic elements
             end;
         });
 
+        playerAndContainerSection:Slider({
+            Name = "Player ESP Max Distance",
+            Min = 100, Max = 5000, Default = 2000,
+            Suffix = " studs",
+            Callback = function(Value)
+                ESP.MaxDistance = Value
+            end;
+        });
+
+        playerAndContainerSection:Toggle({
+            Name = "NPC ESP",
+            Flag = "NPC_ESP_Toggle",
+            Default = false,
+            Callback = function(Value)
+                getgenv().NPC_ESP = Value
+            end;
+        });
+
+        playerAndContainerSection:Slider({
+            Name = "NPC Render Distance",
+            Min = 100, Max = 5000, Default = 1500,
+            Suffix = " studs",
+            Callback = function(Value)
+                getgenv().NPCRenderDistance = Value
+            end;
+        });
+
+        playerAndContainerSection:Toggle({
+            Name = "Vehicle ESP",
+            Flag = "Vehicle_ESP_Toggle",
+            Default = false,
+            Callback = function(Value)
+                getgenv().Vehicle_ESP = Value
+            end;
+        });
+
+        playerAndContainerSection:Slider({
+            Name = "Vehicle Render Distance",
+            Min = 100, Max = 5000, Default = 2000,
+            Suffix = " studs",
+            Callback = function(Value)
+                getgenv().VehicleRenderDistance = Value
+            end;
+        });
+
         playerAndContainerSection:Toggle({
             Name = "Dropped Item ESP",
             Flag = "DroppedItemESP",
@@ -1158,6 +1203,30 @@ do
     end
     task.spawn(CacheValidItems)
 
+    local validNPCNames = {}
+    local function CacheNPCPresets()
+        local RS = game:GetService("ReplicatedStorage")
+        local presets = RS:FindFirstChild("AiPresets")
+        if presets then
+            for _, v in pairs(presets:GetChildren()) do
+                validNPCNames[v.Name] = true
+            end
+        end
+    end
+    task.spawn(CacheNPCPresets)
+
+    local validVehicleNames = {}
+    local function CacheVehicleNames()
+        local RS = game:GetService("ReplicatedStorage")
+        local vehicles = RS:FindFirstChild("Vehicles")
+        if vehicles then
+            for _, v in pairs(vehicles:GetChildren()) do
+                validVehicleNames[v.Name] = true
+            end
+        end
+    end
+    task.spawn(CacheVehicleNames)
+
         function Functions:ScanInventory(Target)
         local found = {}
         if not Target or not next(validItemNames) then return found end
@@ -1304,6 +1373,85 @@ do
 
         Container.AncestryChanged:Connect(function()
             if not Container.Parent then Text:Remove(); conn:Disconnect() end
+        end)
+    end
+
+    local npc_esp_cache = {}
+    function Functions:DrawNPC(NPC)
+        if npc_esp_cache[NPC] or (not NPC:IsA("Model") and not NPC:IsA("BasePart")) then return end
+        npc_esp_cache[NPC] = true
+        local Text = Drawing.new("Text")
+        Text.Center = true; Text.Font = 2; Text.Outline = true; Text.Size = 13; Text.Visible = false
+
+        local conn;
+        conn = RunService.RenderStepped:Connect(function()
+            if not getgenv().NPC_ESP or not Functions:IsAlive(LocalPlayer) then
+                Text.Visible = false; return
+            end
+            
+            local Root = NPC.PrimaryPart or NPC:FindFirstChild("HumanoidRootPart") or NPC:FindFirstChild("Head") or NPC:FindFirstChildWhichIsA("BasePart")
+            if not Root then Text.Visible = false; return end
+
+            local Dist = (Root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if Dist > (getgenv().NPCRenderDistance or 1500) then
+                Text.Visible = false; return
+            end
+
+            local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(Root.Position)
+            if not OnScreen then Text.Visible = false; return end
+
+            local npcName = NPC:GetAttribute("DisplayName") or NPC:GetAttribute("CallSign") or NPC.Name
+            local tag = "[NPC]"
+            
+            if validNPCNames[npcName] or NPC:GetAttribute("Preset") then tag = "[AI]" end
+            if npcName:find("MON") or npcName:find("MINE") or npcName:find("Explosive") then tag = "[EXPLOSIVE]" end
+
+            local hum = NPC:FindFirstChildOfClass("Humanoid")
+            local healthInfo = hum and string.format("\nHP: %d/%d", math.round(hum.Health), math.round(hum.MaxHealth)) or ""
+
+            Text.Color = Color3.fromRGB(255, 70, 70)
+            Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
+            Text.Text = string.format("%s %s%s\n%d studs", tag, npcName, healthInfo, math.round(Dist))
+            Text.Visible = true
+        end)
+
+        NPC.AncestryChanged:Connect(function()
+            if not NPC.Parent then Text:Remove(); conn:Disconnect(); npc_esp_cache[NPC] = nil end
+        end)
+    end
+
+    local vehicle_esp_cache = {}
+    function Functions:DrawVehicle(Vehicle)
+        if vehicle_esp_cache[Vehicle] or not Vehicle:IsA("Model") then return end
+        vehicle_esp_cache[Vehicle] = true
+        local Text = Drawing.new("Text")
+        Text.Center = true; Text.Font = 2; Text.Outline = true; Text.Size = 13; Text.Visible = false
+
+        local conn;
+        conn = RunService.RenderStepped:Connect(function()
+            if not getgenv().Vehicle_ESP or not Functions:IsAlive(LocalPlayer) then
+                Text.Visible = false; return
+            end
+            
+            local Root = Vehicle.PrimaryPart or Vehicle:FindFirstChildWhichIsA("BasePart")
+            if not Root then Text.Visible = false; return end
+
+            local Dist = (Root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if Dist > (getgenv().VehicleRenderDistance or 2000) then
+                Text.Visible = false; return
+            end
+
+            local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(Root.Position)
+            if not OnScreen then Text.Visible = false; return end
+
+            Text.Color = Color3.fromRGB(255, 255, 0) -- Amarillo para vehículos
+            Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
+            Text.Text = string.format("[VEHICLE] %s\n%d studs", Vehicle.Name, math.round(Dist))
+            Text.Visible = true
+        end)
+
+        Vehicle.AncestryChanged:Connect(function()
+            if not Vehicle.Parent then Text:Remove(); conn:Disconnect(); vehicle_esp_cache[Vehicle] = nil end
         end)
     end
 
@@ -1589,6 +1737,34 @@ task.spawn(function()
         for _, v in pairs(Containers:GetDescendants()) do if v:IsA("Model") then Functions:DrawContainer(v) end end
         Containers.ChildAdded:Connect(function(v) Functions:DrawContainer(v) end)
     end
+end)
+
+-- NPC & Vehicle ESP Initialization
+task.spawn(function()
+    local AiZones = workspace:FindFirstChild("AiZones")
+
+    local function setup(v)
+        if not v or not v.Parent then return end
+        if v:IsA("Model") then
+            -- NPC Logic
+            local isAi = validNPCNames[v.Name] or v:GetAttribute("Preset") or v.Name:find("AI") or v.Name:find("NPC")
+            if isAi or (AiZones and v:IsDescendantOf(AiZones)) then
+                Functions:DrawNPC(v)
+            end
+            
+            -- Vehicle Logic
+            if validVehicleNames[v.Name] or v:FindFirstChild("DriveSeat") or v:FindFirstChild("VehicleSeat") then
+                Functions:DrawVehicle(v)
+            end
+        elseif v:IsA("BasePart") then
+            if validNPCNames[v.Name] or v.Name:find("MON50") or v.Name:find("MINE") then
+                Functions:DrawNPC(v)
+            end
+        end
+    end
+
+    for _, v in pairs(workspace:GetDescendants()) do setup(v) end
+    workspace.DescendantAdded:Connect(setup)
 end)
 
 -- Dropped Item ESP Initialization

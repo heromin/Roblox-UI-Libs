@@ -649,6 +649,35 @@ do -- Basic elements
             end;
         });
 
+        combatVisualsSection:Dropdown({
+            Name = "Tracer Design",
+            List = {"Default", "Lightning", "Image", "Beam"},
+            Default = "Default",
+            Flag = "TracerDesign",
+            Callback = function(Value)
+                getgenv().TracerDesign = Value
+            end;
+        });
+
+        combatVisualsSection:Slider({
+            Name = "Tracer Thickness",
+            Flag = "TracerThickness",
+            Min = 0.01, Max = 1, Default = 0.05, Decimals = 0.01,
+            Callback = function(Value)
+                getgenv().TracerThickness = Value
+            end;
+        });
+
+        combatVisualsSection:Textbox({
+            Name = "Tracer Texture ID",
+            Default = "rbxassetid://44611181",
+            Flag = "TracerTextureID",
+            Placeholder = "rbxassetid://...",
+            Callback = function(Value)
+                getgenv().TracerTextureID = Value
+            end;
+        });
+
         combatVisualsSection:Toggle({ Name = "Hit Sound",
             Flag = "HitSoundToggle",
             Default = false,
@@ -1378,7 +1407,7 @@ do
 
     local npc_esp_cache = {}
     function Functions:DrawNPC(NPC)
-        if npc_esp_cache[NPC] or (not NPC:IsA("Model") and not NPC:IsA("BasePart")) then return end
+        if npc_esp_cache[NPC] or not NPC:IsA("Model") then return end
         npc_esp_cache[NPC] = true
         local Text = Drawing.new("Text")
         Text.Center = true; Text.Font = 2; Text.Outline = true; Text.Size = 13; Text.Visible = false
@@ -1389,7 +1418,7 @@ do
                 Text.Visible = false; return
             end
             
-            local Root = NPC.PrimaryPart or NPC:FindFirstChild("HumanoidRootPart") or NPC:FindFirstChild("Head") or NPC:FindFirstChildWhichIsA("BasePart")
+            local Root = NPC.PrimaryPart or NPC:FindFirstChild("HumanoidRootPart") or NPC:FindFirstChild("Head")
             if not Root then Text.Visible = false; return end
 
             local Dist = (Root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
@@ -1409,9 +1438,18 @@ do
             local hum = NPC:FindFirstChildOfClass("Humanoid")
             local healthInfo = hum and string.format("\nHP: %d/%d", math.round(hum.Health), math.round(hum.MaxHealth)) or ""
 
+            -- Loot info like container ESP
+            local TotalPrice, Loot = 0, ""
+            local items = Functions:ScanInventory(NPC)
+            for _, itemName in pairs(items) do
+                local price = ValueCache[itemName] or 0
+                TotalPrice = TotalPrice + price
+                Loot = Loot .. itemName .. "\n"
+            end
+
             Text.Color = Color3.fromRGB(255, 70, 70)
             Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
-            Text.Text = string.format("%s %s%s\n%d studs", tag, npcName, healthInfo, math.round(Dist))
+            Text.Text = string.format("%s %s%s\n$%d\n%s%d studs", tag, npcName, healthInfo, TotalPrice, Loot, math.round(Dist))
             Text.Visible = true
         end)
 
@@ -1615,44 +1653,119 @@ do
         local Color = getgenv().TracerColor or Color3.new(1, 1, 1)
         local Lifetime = getgenv().BulletTracersLifetime or 0.3
         local TravelTime = getgenv().BulletTracersTravelTime or 0.05
-        local TInfo = TweenInfo.new(Lifetime, Enum.EasingStyle.Linear)
+        local Thickness = getgenv().TracerThickness or 0.05
+        local Design = getgenv().TracerDesign or "Default"
         local TS = game:GetService("TweenService")
         local Debris = game:GetService("Debris")
 
-        -- Laser Core (White Inner)
-        local Core = Instance.new("Part", workspace)
-        Core.Name = "InariTracerCore"
-        Core.Anchored, Core.CanCollide, Core.CanQuery, Core.CastShadow = true, false, false, false
-        Core.Material = Enum.Material.Neon
-        Core.Color = Color3.new(2, 2, 2)
-        Core.Size = Vector3.new(0.04, 0.04, 0)
-        Core.CFrame = CFrame.new(Origin, EndPos)
-
-        -- External Glow (Colored)
-        local Glow = Core:Clone()
-        Glow.Name = "InariTracerGlow"; Glow.Parent = workspace
-        Glow.Color = Color
-        Glow.Size = Vector3.new(0.15, 0.15, 0)
-        Glow.Transparency = 0.5
-
-        -- Impact Flash
-
+        -- Impact Flash (Pre-declared)
         local Impact = Instance.new("Part", workspace)
         Impact.Shape, Impact.Anchored, Impact.CanCollide = Enum.PartType.Ball, true, false
         Impact.Size, Impact.Position = Vector3.new(0.1, 0.1, 0.1), EndPos
         Impact.Material, Impact.Color = Enum.Material.Neon, Color
+        Impact.Transparency = 1
 
-        local TargetSize = (Origin - EndPos).Magnitude
-        TS:Create(Core, TweenInfo.new(TravelTime), {Size = Vector3.new(0.04, 0.04, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
-        TS:Create(Glow, TweenInfo.new(TravelTime), {Size = Vector3.new(0.15, 0.15, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
+        if Design == "Default" then
+            local Core = Instance.new("Part", workspace)
+            Core.Name = "InariTracerCore"
+            Core.Anchored, Core.CanCollide, Core.CanQuery, Core.CastShadow = true, false, false, false
+            Core.Material = Enum.Material.Neon
+            Core.Color = Color3.new(2, 2, 2)
+            Core.Size = Vector3.new(Thickness, Thickness, 0)
+            Core.CFrame = CFrame.new(Origin, EndPos)
 
-        task.delay(TravelTime, function()
-            TS:Create(Core, TInfo, {Transparency = 1}):Play()
-            TS:Create(Glow, TInfo, {Transparency = 1}):Play()
-            TS:Create(Impact, TInfo, {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
-        end)
+            local Glow = Core:Clone()
+            Glow.Name = "InariTracerGlow"; Glow.Parent = workspace
+            Glow.Color = Color
+            Glow.Size = Vector3.new(Thickness * 3.75, Thickness * 3.75, 0)
+            Glow.Transparency = 0.5
 
-        Debris:AddItem(Core, Lifetime + TravelTime); Debris:AddItem(Glow, Lifetime + TravelTime); Debris:AddItem(Impact, Lifetime + TravelTime)
+            local TargetSize = (Origin - EndPos).Magnitude
+            TS:Create(Core, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness, Thickness, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
+            TS:Create(Glow, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness * 3.75, Thickness * 3.75, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
+
+            task.delay(TravelTime, function()
+                TS:Create(Core, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                TS:Create(Glow, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                Impact.Transparency = 0
+                TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+            end)
+            Debris:AddItem(Core, Lifetime + TravelTime); Debris:AddItem(Glow, Lifetime + TravelTime)
+
+        elseif Design == "Lightning" then
+            local Points = {Origin}
+            local Segments = 5
+            local Distance = (Origin - EndPos).Magnitude
+            local Direction = (EndPos - Origin).Unit
+            
+            for i = 1, Segments - 1 do
+                local BasePos = Origin + (Direction * (Distance / Segments) * i)
+                local Offset = Vector3.new(math.random(-5, 5)/10, math.random(-5, 5)/10, math.random(-5, 5)/10)
+                table.insert(Points, BasePos + Offset)
+            end
+            table.insert(Points, EndPos)
+
+            for i = 1, #Points - 1 do
+                local P1, P2 = Points[i], Points[i+1]
+                local Segment = Instance.new("Part", workspace)
+                Segment.Anchored, Segment.CanCollide, Segment.CanQuery = true, false, false
+                Segment.Material = Enum.Material.Neon
+                Segment.Color = Color
+                Segment.Size = Vector3.new(Thickness, Thickness, (P1 - P2).Magnitude)
+                Segment.CFrame = CFrame.new(P1:Lerp(P2, 0.5), P2)
+                
+                TS:Create(Segment, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                Debris:AddItem(Segment, Lifetime)
+            end
+            Impact.Transparency = 0
+            TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+
+        elseif Design == "Beam" or Design == "Image" then
+            local Attachment0 = Instance.new("Attachment", workspace.Terrain)
+            local Attachment1 = Instance.new("Attachment", workspace.Terrain)
+            Attachment0.WorldPosition = Origin
+            Attachment1.WorldPosition = EndPos
+
+            local Beam = Instance.new("Beam", workspace.Terrain)
+            Beam.Attachment0 = Attachment0
+            Beam.Attachment1 = Attachment1
+            Beam.Color = ColorSequence.new(Color)
+            Beam.Width0 = Thickness * 2
+            Beam.Width1 = Thickness * 2
+            Beam.LightEmission = 1
+            Beam.LightInfluence = 0
+            
+            if Design == "Image" then
+                Beam.Texture = getgenv().TracerTextureID or "rbxassetid://18837739"
+                Beam.TextureMode = Enum.TextureMode.Wrap
+                Beam.TextureSpeed = 2
+                Beam.TextureLength = 2
+                Beam.FaceCamera = true
+                Beam.LightEmission = 0.8
+            end
+
+            task.spawn(function()
+                local start = tick()
+                while tick() - start < Lifetime do
+                    local elapsed = tick() - start
+                    local alpha = elapsed / Lifetime
+                    pcall(function()
+                        Beam.Transparency = NumberSequence.new(alpha)
+                    end)
+                    task.wait()
+                end
+                pcall(function()
+                    Beam.Enabled = false
+                end)
+            end)
+            Debris:AddItem(Beam, Lifetime + 0.1)
+            Debris:AddItem(Attachment0, Lifetime + 0.1)
+            Debris:AddItem(Attachment1, Lifetime + 0.1)
+            
+            Impact.Transparency = 0
+            TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+        end
+        Debris:AddItem(Impact, Lifetime + TravelTime)
     end;
 end;
 
@@ -1741,30 +1854,24 @@ end)
 
 -- NPC & Vehicle ESP Initialization
 task.spawn(function()
-    local AiZones = workspace:FindFirstChild("AiZones")
-
-    local function setup(v)
-        if not v or not v.Parent then return end
-        if v:IsA("Model") then
-            -- NPC Logic
-            local isAi = validNPCNames[v.Name] or v:GetAttribute("Preset") or v.Name:find("AI") or v.Name:find("NPC")
-            if isAi or (AiZones and v:IsDescendantOf(AiZones)) then
-                Functions:DrawNPC(v)
-            end
-            
-            -- Vehicle Logic
-            if validVehicleNames[v.Name] or v:FindFirstChild("DriveSeat") or v:FindFirstChild("VehicleSeat") then
-                Functions:DrawVehicle(v)
-            end
-        elseif v:IsA("BasePart") then
-            if validNPCNames[v.Name] or v.Name:find("MON50") or v.Name:find("MINE") then
-                Functions:DrawNPC(v)
-            end
-        end
+    local AIs = workspace:WaitForChild("AIs", 10)
+    if AIs then
+        for _, v in pairs(AIs:GetDescendants()) do if v:IsA("Model") then Functions:DrawNPC(v) end end
+        AIs.ChildAdded:Connect(function(v) if v:IsA("Model") then Functions:DrawNPC(v) end end)
     end
 
-    for _, v in pairs(workspace:GetDescendants()) do setup(v) end
-    workspace.DescendantAdded:Connect(setup)
+    local Vehicles = workspace:WaitForChild("Vehicles", 10)
+    if Vehicles then
+        for _, v in pairs(Vehicles:GetDescendants()) do if v:IsA("Model") then Functions:DrawVehicle(v) end end
+        Vehicles.ChildAdded:Connect(function(v) if v:IsA("Model") then Functions:DrawVehicle(v) end end)
+    end
+
+    -- Fallback for AiZones
+    local AiZones = workspace:FindFirstChild("AiZones")
+    if AiZones then
+        for _, v in pairs(AiZones:GetDescendants()) do if v:IsA("Model") then Functions:DrawNPC(v) end end
+        AiZones.DescendantAdded:Connect(function(v) if v:IsA("Model") then Functions:DrawNPC(v) end end)
+    end
 end)
 
 -- Dropped Item ESP Initialization

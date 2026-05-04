@@ -524,6 +524,21 @@ do -- Basic elements
             end;
         });
 
+        playerAndContainerSection:Toggle({ 
+            Name = "Player Loot ESP",
+            Flag = "PlayerLootESP",
+            Default = false,
+            Callback = function(Value)
+                getgenv().PlayerLootESP = Value
+            end;
+        }):Colorpicker({
+            Name = "Loot Color",
+            Default = Color3.fromRGB(0, 255, 255),
+            Callback = function(Value)
+                getgenv().PlayerLootESPColor = Value
+            end;
+        });
+
         playerAndContainerSection:Toggle({
             Name = "Container ESP",
             Flag = "ContainerESP",
@@ -1458,6 +1473,53 @@ do
         end)
     end
 
+    local player_esp_cache = {}
+    function Functions:DrawPlayer(PlayerChar)
+        if player_esp_cache[PlayerChar] or not PlayerChar:IsA("Model") then return end
+        local PlayerObj = game.Players:GetPlayerFromCharacter(PlayerChar)
+        if not PlayerObj or PlayerObj == LocalPlayer then return end
+        
+        player_esp_cache[PlayerChar] = true
+        local Text = Drawing.new("Text")
+        Text.Center = true; Text.Font = 2; Text.Outline = true; Text.Size = 13; Text.Visible = false
+
+        local conn;
+        conn = RunService.RenderStepped:Connect(function()
+            if not getgenv().PlayerLootESP or not Functions:IsAlive(LocalPlayer) or not PlayerChar.Parent then
+                Text.Visible = false; return
+            end
+            
+            local Root = PlayerChar:FindFirstChild("HumanoidRootPart") or PlayerChar:FindFirstChild("Head")
+            if not Root then Text.Visible = false; return end
+
+            local Dist = (Root.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if Dist > (getgenv().ESP_MaxDistance or 2000) then
+                Text.Visible = false; return
+            end
+
+            local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(Root.Position)
+            if not OnScreen then Text.Visible = false; return end
+
+            -- Loot info like NPC ESP
+            local TotalPrice, Loot = 0, ""
+            local items = Functions:ScanInventory(PlayerObj)
+            for _, itemName in pairs(items) do
+                local price = ValueCache[itemName] or 0
+                TotalPrice = TotalPrice + price
+                Loot = Loot .. itemName .. "\n"
+            end
+
+            Text.Color = getgenv().PlayerLootESPColor or Color3.fromRGB(0, 255, 255)
+            Text.Position = Vector2.new(ScreenPos.X, ScreenPos.Y + 45) 
+            Text.Text = string.format("[PLAYER] %s\n$%d\n%s%d studs", PlayerObj.Name, TotalPrice, Loot, math.round(Dist))
+            Text.Visible = true
+        end)
+
+        PlayerChar.AncestryChanged:Connect(function()
+            if not PlayerChar.Parent then Text:Remove(); conn:Disconnect(); player_esp_cache[PlayerChar] = nil end
+        end)
+    end
+
     local vehicle_esp_cache = {}
     function Functions:DrawVehicle(Vehicle)
         if vehicle_esp_cache[Vehicle] or not Vehicle:IsA("Model") then return end
@@ -1885,6 +1947,20 @@ task.spawn(function()
         end
         DroppedItemsFolder.ChildAdded:Connect(function(v) if v:IsA("Model") and v.PrimaryPart then Functions:DrawDroppedItem(v) end end)
     end
+end)
+
+-- Player Loot ESP Initialization
+task.spawn(function()
+    local function setupPlayer(plr)
+        if plr == LocalPlayer then return end
+        if plr.Character then Functions:DrawPlayer(plr.Character) end
+        plr.CharacterAdded:Connect(function(char)
+            Functions:DrawPlayer(char)
+        end)
+    end
+
+    for _, plr in pairs(game.Players:GetPlayers()) do setupPlayer(plr) end
+    game.Players.PlayerAdded:Connect(setupPlayer)
 end)
 -- Inventory Viewer Logic
 local lastInvContent = ""

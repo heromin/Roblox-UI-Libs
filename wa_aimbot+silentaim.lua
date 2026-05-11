@@ -13,6 +13,8 @@ getgenv().AimbotTargetPart = getgenv().AimbotTargetPart or "Head"
 getgenv().AimbotSmoothness = getgenv().AimbotSmoothness or 1
 getgenv().TeamCheck = getgenv().TeamCheck or false
 getgenv().WallCheck = getgenv().WallCheck or false
+getgenv().TriggerbotEnabled = getgenv().TriggerbotEnabled or false
+getgenv().TriggerbotDelay = getgenv().TriggerbotDelay or 0
 getgenv().drawFOV = getgenv().drawFOV or false
 getgenv().fovRadius = getgenv().fovRadius or 50
 
@@ -227,6 +229,36 @@ task.spawn(function()
     end))
     
     print("[COMBAT] Security Bypasses Ready.")
+end)
+
+-- Triggerbot Implementation
+task.spawn(function()
+    while task.wait() do
+        if getgenv().TriggerbotEnabled then
+            local target = Mouse.Target
+            if target and target.Parent then
+                local character = target:FindFirstAncestorOfClass("Model")
+                local player = character and Players:GetPlayerFromCharacter(character)
+                
+                if player and player ~= LocalPlayer and isAlive(player) then
+                    if getgenv().TeamCheck and player.Team == LocalPlayer.Team then
+                        continue
+                    end
+                    
+                    if getgenv().TriggerbotDelay > 0 then
+                        task.wait(getgenv().TriggerbotDelay)
+                    end
+                    
+                    -- Re-check target after delay
+                    if Mouse.Target and Mouse.Target:IsDescendantOf(character) then
+                        pcall(mouse1press)
+                        task.wait(0.01)
+                        pcall(mouse1release)
+                    end
+                end
+            end
+        end
+    end
 end)
 
 return {

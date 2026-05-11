@@ -3,6 +3,7 @@ local Functions = {}
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
 local HitSounds = {
         ["Bell"] = "rbxassetid://137731492025967",
@@ -16,14 +17,14 @@ local HitSounds = {
         if not getgenv().HitSound then return end
         local Sound = Instance.new("Sound", game:GetService("SoundService"))
         Sound.SoundId = HitSounds[getgenv().SelectedHitSound or "Bell"]
-        Sound.Volume = getgenv().HitSoundVolume or 2
+        Sound.Volume = getgenv().HitSoundVolume or 4
         Sound:Play()
         Debris:AddItem(Sound, 2)
     end;
 
     local HitLogsTable = {}
     function Functions:UpdateHitLogs()
-        local center = (workspace.CurrentCamera.ViewportSize / 2)
+        local center = (Camera.ViewportSize / 2)
         local fontSize = getgenv().HitLogsSize or 14
         for i = 1, #HitLogsTable do
             HitLogsTable[i].Position = Vector2.new(center.X, (center.Y + 150) + (i * (fontSize + 4)))
@@ -73,7 +74,7 @@ local HitSounds = {
         task.spawn(function()
             local Color = getgenv().HitmarkersColor or Color3.new(1,1,1)
             local Size = getgenv().HitmarkersSize or 7
-            local Center = CurrentCamera.ViewportSize / 2
+            local Center = Camera.ViewportSize / 2
             
             for _, l in pairs(CenterHitmarker) do l.Color = Color; l.Visible = true end
             local Start = tick()
@@ -116,7 +117,7 @@ local HitSounds = {
                 local CurrentSize = math.clamp((Elapsed / 0.05) * MaxSize, 2, MaxSize)
                 
                 if HitPart and HitPart.Parent then
-                    local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(HitPart.CFrame:PointToWorldSpace(Offset))
+                    local ScreenPos, OnScreen = Camera:WorldToViewportPoint(HitPart.CFrame:PointToWorldSpace(Offset))
                     if OnScreen then
                         local Pos2D = Vector2.new(ScreenPos.X, ScreenPos.Y)
                         if Type == "X" then
@@ -258,4 +259,5 @@ local HitSounds = {
         Debris:AddItem(Impact, Lifetime + TravelTime)
     end;
 
+getgenv().CombatFunctions = Functions
 return Functions

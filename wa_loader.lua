@@ -5,21 +5,21 @@ local CombatFuncs = loadstring(game:HttpGet("https://raw.githubusercontent.com/h
 local Inventory = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua"))()
 local esp = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
 
--- Inicializar módulos dependientes
+-- Modules
 Inventory:Init()
 esp:Init()
 
--- Crear Ventana
+-- Window
 local Window = Library:CreateWindow("amber.lol", os.date("%b %d, %Y"))
 
--- Pestañas
+-- Tabs
 local TabCombat = Window:AddTab("Combat")
 local TabVisuals = Window:AddTab("Visual")
 local TabMovement = Window:AddTab("Movement")
 local TabPlayers = Window:AddTab("Players")
 local TabSettings = Window:AddTab("Settings")
 
--- --- PESTAÑA COMBAT ---
+-- --- TAB COMBAT ---
 local Aimbot_Section = TabCombat:AddSection("Aimbot Settings", "Left")
 TabCombat:AddCheckbox(Aimbot_Section, "Enable Aimbot", false, function(state) getgenv().isAimbotEnabled = state end):AddKeybind(Enum.KeyCode.F)
 TabCombat:AddCheckbox(Aimbot_Section, "Silent Aim", false, function(state) getgenv().SilentAImUser = state end):AddKeybind(Enum.KeyCode.G)
@@ -36,7 +36,7 @@ TabCombat:AddCheckbox(Checks_Section, "Wall Check", false, function(state) getge
 TabCombat:AddCheckbox(Checks_Section, "Show FOV", false, function(state) getgenv().drawFOV = state end)
 TabCombat:AddSlider(Checks_Section, "FOV Radius", 30, 500, 50, function(val) getgenv().fovRadius = val end)
 
--- --- PESTAÑA VISUALS ---
+-- --- TAB VISUALS ---
 local PlayerESP_Section = TabVisuals:AddSection("Player ESP", "Left")
 TabVisuals:AddCheckbox(PlayerESP_Section, "Enable ESP", false, function(state)
     getgenv().ESP_Enabled = state
@@ -94,7 +94,7 @@ TabVisuals:AddSlider(Camera_Section, "Field of View", 70, 120, 90, function(val)
     workspace.CurrentCamera.FieldOfView = val
 end)
 
--- --- PESTAÑA MOVEMENT ---
+-- --- TAB MOVEMENT ---
 local MainMove_Section = TabMovement:AddSection("Movement Utils", "Left")
 TabMovement:AddCheckbox(MainMove_Section, "Enable Fly", false, function(Value) 
     getgenv().FlyEnabled = Value
@@ -144,7 +144,7 @@ TabMovement:AddButton(ExtraMove_Section, "Reset Velocity", function()
     end
 end)
 
--- --- PESTAÑA PLAYERS ---
+-- --- TAB PLAYERS ---
 local Players_Section = TabPlayers:AddSection("Target Tools", "Left")
 TabPlayers:AddCheckbox(Players_Section, "Target HUD", false, function(state) 
     getgenv().TargetHUDEnabled = state 
@@ -171,10 +171,8 @@ TabSettings:AddButton(Settings_Section, "Unload Script", function()
     Library:Unload()
 end)
 
-local Theme_Section = TabSettings:AddSection("Theme", "Right")
+local Theme_Section = TabSettings:AddSection("Theme(NOT WORKING)", "Right")
 TabSettings:AddColorPicker(Theme_Section, "Accent Color", Color3.fromRGB(230, 40, 90), function(color)
-    -- Nota: wa.lua usa variables locales para colores, 
-    -- para cambiar el tema en tiempo real necesitarías exponer 'colors' en la librería.
     print("New Theme Color Selected")
 end)
 

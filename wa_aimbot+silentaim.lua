@@ -26,6 +26,18 @@ local function isAlive(player)
     return player and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 and player.Character:FindFirstChild("HumanoidRootPart")
 end
 
+local function checkVisibility(targetPart, targetCharacter)
+    local origin = Camera.CFrame.Position
+    local direction = targetPart.Position - origin
+    local raycastParams = RaycastParams.new()
+    
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
+    
+    local result = workspace:Raycast(origin, direction, raycastParams)
+    return result == nil
+end
+
 local function getClosestPlayerToMouse()
     local shortestDistance = math.huge
     local target = nil
@@ -41,9 +53,7 @@ local function getClosestPlayerToMouse()
                 local pos, visible = Camera:WorldToViewportPoint(part.Position)
                 if visible then
                     if getgenv().WallCheck then
-                        local ray = Ray.new(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * (part.Position - Camera.CFrame.Position).Magnitude)
-                        local hit = workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, player.Character})
-                        if hit then continue end
+                        if not checkVisibility(part, player.Character) then continue end
                     end
 
                     local dist = (mousePos - Vector2.new(pos.X, pos.Y)).Magnitude

@@ -123,10 +123,8 @@ local BulletModule = nil
 pcall(function()
     BulletModule = require(game:GetService("ReplicatedStorage").Modules.FPS.Bullet)
 end)
-if not BulletModule and BulletModule.CreateBullet and hookfunction and newcclosure then
-    print("[COMBAT] SILENT AIM NOT SUPPORTED")
-if BulletModule and BulletModule.CreateBullet and hookfunction and newcclosure then
-    print("[COMBAT] SILENT AIM SUPPORTED")
+
+if BulletModule and BulletModule.CreateBullet then
     local OldBullet; OldBullet = hookfunction(BulletModule.CreateBullet, newcclosure(function(...)
         local Args          = {...};
         local Target, Part  = getClosestPlayerToMouse();
@@ -190,6 +188,11 @@ getgenv().UnloadCombat = function()
 end
 
 -- Expanded Anti-Cheat Bypass & Security
+if not hookfunction or not newcclosure then 
+    LocalPlayer:kick("Executor Not Supported");
+    return
+end;
+
 local function SecureBypass()
     local mt = getrawmetatable(game)
     local old_idx = mt.__index
@@ -245,26 +248,24 @@ local function BypassAC(Char)
 end
 
 -- Initialize Security
-if hookfunction and newcclosure then
-    task.spawn(function()
-        print("[COMBAT] Initializing Security Bypasses...")
-        pcall(SecureBypass)
-        if LocalPlayer.Character then
-            pcall(BypassAC, LocalPlayer.Character)
-        end
-        LocalPlayer.CharacterAdded:Connect(function(char)
-            pcall(BypassAC, char)
-        end)
-        
-        -- Hook Kick
-        local old_kick; old_kick = hookfunction(game.Players.LocalPlayer.Kick, newcclosure(function(self, ...)
-            if not checkcaller() then return end
-            return old_kick(self, ...)
-        end))
-        
-        print("[COMBAT] Security Bypasses Ready.")
+task.spawn(function()
+    print("[COMBAT] Initializing Security Bypasses...")
+    pcall(SecureBypass)
+    if LocalPlayer.Character then
+        pcall(BypassAC, LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        pcall(BypassAC, char)
     end)
-end
+    
+    -- Hook Kick
+    local old_kick; old_kick = hookfunction(game.Players.LocalPlayer.Kick, newcclosure(function(self, ...)
+        if not checkcaller() then return end
+        return old_kick(self, ...)
+    end))
+    
+    print("[COMBAT] Security Bypasses Ready.")
+end)
 
 -- Triggerbot Implementation
 task.spawn(function()

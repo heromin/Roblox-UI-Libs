@@ -130,26 +130,7 @@ if BulletModule and BulletModule.CreateBullet then
     return OldBullet(table.unpack(Args))
     end));
     print("[COMBAT] Silent Aim Hooked successfully.")
-else
-    warn("[COMBAT] Could not find Bullet Module. Silent Aim disabled.")
 end
-
-if not hookfunction or not newcclosure then 
-    game:GetService("Players").localPlayer:kick("Executor Not Supported");
-end;
-print("[INFO] Executor check passed. Inari Upgrade initialized.")
-print("[ANTI-CHEAT] Scanning for protection...")
-task.wait(0.5)
-print("[ANTI-CHEAT] Bypassing memory checks...")
-task.wait(0.3)
-print("[ANTI-CHEAT] Bypass successful!")
-
-local Bullet;
-xpcall(function()
-    Bullet = require(game:GetService("ReplicatedStorage").Modules.FPS.Bullet).CreateBullet;
-end,function()
-    game:GetService("Players").localPlayer:kick("Executor Not Supported");
-end);
 
 -- Unload Function (for clean re-injection)
 getgenv().UnloadCombat = function()
@@ -157,6 +138,86 @@ getgenv().UnloadCombat = function()
     -- Note: hookfunction cannot be easily reversed without original ref, 
     -- but for a library this setup is persistent until game restart or script re-hook.
 end
+
+-- Expanded Anti-Cheat Bypass & Security
+if not hookfunction or not newcclosure then 
+    LocalPlayer:kick("Executor Not Supported");
+    return
+end;
+
+local function SecureBypass()
+    local mt = getrawmetatable(game)
+    local old_idx = mt.__index
+    setreadonly(mt, false)
+
+    mt.__index = newcclosure(function(self, index)
+        if not checkcaller() and typeof(self) == "Instance" then
+            local name = tostring(index)
+            if self:IsA("BasePart") and (name == "Velocity" or name == "AssemblyLinearVelocity") then
+                if self.Name == "HumanoidRootPart" or (LocalPlayer.Character and self:IsDescendantOf(LocalPlayer.Character)) then
+                    return Vector3.new(0, 0, 0)
+                end
+            end
+        end
+        return old_idx(self, index)
+    end)
+
+    setreadonly(mt, true)
+end
+
+local function BypassAC(Char)
+    if not Char then return end
+    
+    local signals = {Char.ChildRemoved, Char.DescendantAdded, Char.ChildAdded}
+    local humanoid = Char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        table.insert(signals, humanoid.StateChanged)
+        table.insert(signals, humanoid.Changed)
+    end
+
+    for _, signal in pairs(signals) do
+        for _, v in pairs(getconnections(signal)) do
+            if v.Function then
+                local src = debug.info(v.Function, "s")
+                if src:find("CharacterController") or src:find("Anticheat") or src:find("Handler") then
+                    pcall(function() v:Disable() end)
+                    
+                    local upvals = getupvalues(v.Function)
+                    for _, up in pairs(upvals) do
+                        if type(up) == "function" then
+                            local up_src = debug.info(up, "s")
+                            if up_src:find("CharacterController") or up_src:find("Anticheat") then
+                                pcall(function()
+                                    hookfunction(up, function(...) return coroutine.yield() end)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Initialize Security
+task.spawn(function()
+    print("[COMBAT] Initializing Security Bypasses...")
+    pcall(SecureBypass)
+    if LocalPlayer.Character then
+        pcall(BypassAC, LocalPlayer.Character)
+    end
+    LocalPlayer.CharacterAdded:Connect(function(char)
+        pcall(BypassAC, char)
+    end)
+    
+    -- Hook Kick
+    local old_kick; old_kick = hookfunction(game.Players.LocalPlayer.Kick, newcclosure(function(self, ...)
+        if not checkcaller() then return end
+        return old_kick(self, ...)
+    end))
+    
+    print("[COMBAT] Security Bypasses Ready.")
+end)
 
 return {
     GetTarget = function() return closestPlayer, closestPlayerPart end,

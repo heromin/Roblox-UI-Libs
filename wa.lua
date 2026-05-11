@@ -1,4 +1,3 @@
--- Amber UI Library (Inspirada en image_0.png)
 local Library = {}
 
 local userInputService = game:GetService("UserInputService")
@@ -189,7 +188,7 @@ function Library:CreateWindow(title, subtitle)
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.RichText = true
     TitleLabel.Text = "<b>" .. title:upper() .. "</b> <font color='#888888'>| " .. (subtitle or os.date("%b. %d. %Y")) .. "</font>"
-    TitleLabel.Size = UDim2.new(1, -20, 1, 0)
+    TitleLabel.Size = UDim2.new(1, -50, 1, 0)
     TitleLabel.Position = UDim2.new(0, 10, 0, 0)
     TitleLabel.TextColor3 = Color3.new(1, 1, 1)
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -197,6 +196,33 @@ function Library:CreateWindow(title, subtitle)
     TitleLabel.TextSize = 14
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Parent = Header
+
+    local MinimizeBtn = Instance.new("TextButton")
+    MinimizeBtn.Name = "Minimize"
+    MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+    MinimizeBtn.Position = UDim2.new(1, -35, 0, 0)
+    MinimizeBtn.BackgroundTransparency = 1
+    MinimizeBtn.Text = "-"
+    MinimizeBtn.TextColor3 = colors.headerText
+    MinimizeBtn.Font = fonts.header
+    MinimizeBtn.TextSize = 22
+    MinimizeBtn.Parent = Header
+
+    Library:SafeConnect(MinimizeBtn.MouseEnter, function()
+        tweenService:Create(MinimizeBtn, TweenInfo.new(0.3), {TextColor3 = colors.tabActiveIndicator}):Play()
+    end)
+
+    Library:SafeConnect(MinimizeBtn.MouseLeave, function()
+        tweenService:Create(MinimizeBtn, TweenInfo.new(0.3), {TextColor3 = colors.headerText}):Play()
+    end)
+
+    function tabs:SetOpen(state)
+        Main.Visible = state
+    end
+
+    Library:SafeConnect(MinimizeBtn.MouseButton1Click, function()
+        tabs:SetOpen(false)
+    end)
 
     -- Bucle para actualizar la hora automáticamente
     task.spawn(function()

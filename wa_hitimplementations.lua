@@ -1,5 +1,9 @@
 local Functions = {}
 
+local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+
 local HitSounds = {
         ["Bell"] = "rbxassetid://137731492025967",
         ["Skeet"] = "rbxassetid://80461265049096",
@@ -12,9 +16,9 @@ local HitSounds = {
         if not getgenv().HitSound then return end
         local Sound = Instance.new("Sound", game:GetService("SoundService"))
         Sound.SoundId = HitSounds[getgenv().SelectedHitSound or "Bell"]
-        Sound.Volume = getgenv().HitSoundVolume or 4
+        Sound.Volume = getgenv().HitSoundVolume or 2
         Sound:Play()
-        game:GetService("Debris"):AddItem(Sound, 2)
+        Debris:AddItem(Sound, 2)
     end;
 
     local HitLogsTable = {}
@@ -37,7 +41,7 @@ local HitSounds = {
             hitlog.Visible = true
             hitlog.ZIndex = 3
             hitlog.Center = true
-            hitlog.Color = getgenv().HitLogsColor or (getgenv().Library and getgenv().Library.Theme and getgenv().Library.Theme.Accent) or Color3.fromRGB(131, 194, 242)
+            hitlog.Color = getgenv().HitLogsColor or (getgenv().Library and getgenv().Library.Theme and getgenv().Library.Theme.Accent) or Color3.fromRGB(255, 255, 255)
             hitlog.Outline = true
             hitlog.OutlineColor = Color3.new(0, 0, 0)
 
@@ -70,13 +74,14 @@ local HitSounds = {
             local Color = getgenv().HitmarkersColor or Color3.new(1,1,1)
             local Size = getgenv().HitmarkersSize or 7
             local Center = CurrentCamera.ViewportSize / 2
+            
             for _, l in pairs(CenterHitmarker) do l.Color = Color; l.Visible = true end
             local Start = tick()
             while tick() - Start < 0.2 do
                 local Alpha = 1 - ((tick() - Start) / 0.2)
-                CenterHitmarker.L1.From, CenterHitmarker.L1.To = Center - Vector2.new(Size, Size), Center - Vector2.new(Size/2, Size/2)
-                CenterHitmarker.L2.From, CenterHitmarker.L2.To = Center + Vector2.new(Size, -Size), Center + Vector2.new(Size/2, -Size/2)
-                CenterHitmarker.L3.From, CenterHitmarker.L3.To = Center + Vector2.new(-Size, Size), Center + Vector2.new(-Size/2, Size/2)
+                CenterHitmarker.L1.From, CenterHitmarker.L1.To = Center - Vector2.new(Size, Size), Center - Vector2.new(Size/2.5, Size/2.5)
+                CenterHitmarker.L2.From, CenterHitmarker.L2.To = Center + Vector2.new(Size, -Size), Center + Vector2.new(Size/2.5, -Size/2.5)
+                CenterHitmarker.L3.From, CenterHitmarker.L3.To = Center + Vector2.new(-Size, Size), Center + Vector2.new(-Size/2.5, Size/2.5)
                 CenterHitmarker.L4.From, CenterHitmarker.L4.To = Center + Vector2.new(Size, Size), Center + Vector2.new(Size/2, Size/2)
                 for _, l in pairs(CenterHitmarker) do l.Transparency = Alpha end
                 task.wait()
@@ -113,21 +118,18 @@ local HitSounds = {
                 if HitPart and HitPart.Parent then
                     local ScreenPos, OnScreen = CurrentCamera:WorldToViewportPoint(HitPart.CFrame:PointToWorldSpace(Offset))
                     if OnScreen then
+                        local Pos2D = Vector2.new(ScreenPos.X, ScreenPos.Y)
                         if Type == "X" then
                             Drawings[1].Visible, Drawings[2].Visible = true, true
-                            Drawings[1].From = Vector2.new(ScreenPos.X - CurrentSize, ScreenPos.Y - CurrentSize)
-                            Drawings[1].To = Vector2.new(ScreenPos.X + CurrentSize, ScreenPos.Y + CurrentSize)
-                            Drawings[2].From = Vector2.new(ScreenPos.X + CurrentSize, ScreenPos.Y - CurrentSize)
-                            Drawings[2].To = Vector2.new(ScreenPos.X - CurrentSize, ScreenPos.Y + CurrentSize)
+                            Drawings[1].From, Drawings[1].To = Pos2D - Vector2.new(CurrentSize, CurrentSize), Pos2D + Vector2.new(CurrentSize, CurrentSize)
+                            Drawings[2].From, Drawings[2].To = Pos2D + Vector2.new(CurrentSize, -CurrentSize), Pos2D - Vector2.new(CurrentSize, -CurrentSize)
                         elseif Type == "Cross" then
                             Drawings[1].Visible, Drawings[2].Visible = true, true
-                            Drawings[1].From = Vector2.new(ScreenPos.X - CurrentSize, ScreenPos.Y)
-                            Drawings[1].To = Vector2.new(ScreenPos.X + CurrentSize, ScreenPos.Y)
-                            Drawings[2].From = Vector2.new(ScreenPos.X, ScreenPos.Y - CurrentSize)
-                            Drawings[2].To = Vector2.new(ScreenPos.X, ScreenPos.Y + CurrentSize)
+                            Drawings[1].From, Drawings[1].To = Pos2D - Vector2.new(CurrentSize, 0), Pos2D + Vector2.new(CurrentSize, 0)
+                            Drawings[2].From, Drawings[2].To = Pos2D - Vector2.new(0, CurrentSize), Pos2D + Vector2.new(0, CurrentSize)
                         elseif Type == "Circle" then
                             Drawings[1].Visible = true
-                            Drawings[1].Position = Vector2.new(ScreenPos.X, ScreenPos.Y)
+                            Drawings[1].Position = Pos2D
                             Drawings[1].Radius = CurrentSize
                         end
                         for _, d in ipairs(Drawings) do d.Transparency = Alpha end
@@ -145,8 +147,6 @@ local HitSounds = {
         local TravelTime = getgenv().BulletTracersTravelTime or 0.05
         local Thickness = getgenv().TracerThickness or 0.05
         local Design = getgenv().TracerDesign or "Default"
-        local TS = game:GetService("TweenService")
-        local Debris = game:GetService("Debris")
 
         -- Impact Flash (Pre-declared)
         local Impact = Instance.new("Part", workspace)
@@ -171,14 +171,14 @@ local HitSounds = {
             Glow.Transparency = 0.5
 
             local TargetSize = (Origin - EndPos).Magnitude
-            TS:Create(Core, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness, Thickness, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
-            TS:Create(Glow, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness * 3.75, Thickness * 3.75, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
+            TweenService:Create(Core, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness, Thickness, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
+            TweenService:Create(Glow, TweenInfo.new(TravelTime), {Size = Vector3.new(Thickness * 3.75, Thickness * 3.75, TargetSize), CFrame = CFrame.new(Origin:Lerp(EndPos, 0.5), EndPos)}):Play()
 
             task.delay(TravelTime, function()
-                TS:Create(Core, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
-                TS:Create(Glow, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                TweenService:Create(Core, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                TweenService:Create(Glow, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
                 Impact.Transparency = 0
-                TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+                TweenService:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
             end)
             Debris:AddItem(Core, Lifetime + TravelTime); Debris:AddItem(Glow, Lifetime + TravelTime)
 
@@ -204,11 +204,11 @@ local HitSounds = {
                 Segment.Size = Vector3.new(Thickness, Thickness, (P1 - P2).Magnitude)
                 Segment.CFrame = CFrame.new(P1:Lerp(P2, 0.5), P2)
                 
-                TS:Create(Segment, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
+                TweenService:Create(Segment, TweenInfo.new(Lifetime), {Transparency = 1}):Play()
                 Debris:AddItem(Segment, Lifetime)
             end
             Impact.Transparency = 0
-            TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+            TweenService:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
 
         elseif Design == "Beam" or Design == "Image" then
             local Attachment0 = Instance.new("Attachment", workspace.Terrain)
@@ -253,7 +253,7 @@ local HitSounds = {
             Debris:AddItem(Attachment1, Lifetime + 0.1)
             
             Impact.Transparency = 0
-            TS:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
+            TweenService:Create(Impact, TweenInfo.new(Lifetime), {Transparency = 1, Size = Vector3.new(1.5, 1.5, 1.5)}):Play()
         end
         Debris:AddItem(Impact, Lifetime + TravelTime)
     end;

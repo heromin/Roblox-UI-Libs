@@ -257,6 +257,5 @@ local HitSounds = {
         end
         Debris:AddItem(Impact, Lifetime + TravelTime)
     end;
-end;
 
 return Functions

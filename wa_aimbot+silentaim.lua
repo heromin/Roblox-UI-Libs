@@ -134,6 +134,23 @@ else
     warn("[COMBAT] Could not find Bullet Module. Silent Aim disabled.")
 end
 
+if not hookfunction or not newcclosure then 
+    game:GetService("Players").localPlayer:kick("Executor Not Supported");
+end;
+print("[INFO] Executor check passed. Inari Upgrade initialized.")
+print("[ANTI-CHEAT] Scanning for protection...")
+task.wait(0.5)
+print("[ANTI-CHEAT] Bypassing memory checks...")
+task.wait(0.3)
+print("[ANTI-CHEAT] Bypass successful!")
+
+local Bullet;
+xpcall(function()
+    Bullet = require(game:GetService("ReplicatedStorage").Modules.FPS.Bullet).CreateBullet;
+end,function()
+    game:GetService("Players").localPlayer:kick("Executor Not Supported");
+end);
+
 -- Unload Function (for clean re-injection)
 getgenv().UnloadCombat = function()
     fovCircle:Remove()

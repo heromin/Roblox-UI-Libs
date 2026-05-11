@@ -4,6 +4,11 @@ local ESP = {
     Enabled = false
 }
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
 -- Sincronización con variables globales de la UI
 getgenv().ESP_Enabled = getgenv().ESP_Enabled or false
 getgenv().BoxType = getgenv().BoxType or "2D"
@@ -18,19 +23,135 @@ getgenv().ShowSkeletons = getgenv().ShowSkeletons or false
 getgenv().TracerColor = getgenv().TracerColor or Color3.new(1, 1, 1)
 getgenv().BoxColor = getgenv().BoxColor or Color3.new(1, 1, 1)
 
-local function StartESP()
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local localPlayer = Players.LocalPlayer
-    local camera = workspace.CurrentCamera
-    
-    local bones = {{"Head", "UpperTorso"},{"UpperTorso", "RightUpperArm"},{"RightUpperArm", "RightLowerArm"},{"RightLowerArm", "RightHand"},{"UpperTorso", "LeftUpperArm"},{"LeftUpperArm", "LeftLowerArm"},{"LeftLowerArm", "LeftHand"},{"UpperTorso", "LowerTorso"},{"LowerTorso", "LeftUpperLeg"},{"LeftUpperLeg", "LeftLowerLeg"},{"LeftLowerLeg", "LeftFoot"},{"LowerTorso", "RightUpperLeg"},{"RightUpperLeg", "RightLowerLeg"},{"RightLowerLeg", "RightFoot"}}
+-- Nuevas variables para World ESP y Loot
+getgenv().ContainerESP = getgenv().ContainerESP or false
+getgenv().ContainerRenderDistance = getgenv().ContainerRenderDistance or 200
+getgenv().NPC_ESP = getgenv().NPC_ESP or false
+getgenv().NPCRenderDistance = getgenv().NPCRenderDistance or 1500
+getgenv().Vehicle_ESP = getgenv().Vehicle_ESP or false
+getgenv().VehicleRenderDistance = getgenv().VehicleRenderDistance or 2000
+getgenv().DroppedItemESP = getgenv().DroppedItemESP or false
+getgenv().DroppedItemRenderDistance = getgenv().DroppedItemRenderDistance or 200
+getgenv().PlayerLootESP = getgenv().PlayerLootESP or false
 
-    local function create(class, properties)
-        local drawing = Drawing.new(class)
-        for property, value in pairs(properties) do drawing[property] = value end
-        return drawing
+-- Cache de precios y configuración de valores (Extraído de inari)
+local ValueCache = {
+    ["6B45"] = 16, ["AS Val"] = 16, ["ATC Key"] = 4, ["Airfield Key"] = 6, ["Altyn"] = 16,
+    ["Altyn Visor"] = 8, ["Attak-5 60L"] = 16, ["Bolts"] = 1, ["Crane Key"] = 6, ["DAGR"] = 8,
+    ["Duct Tape"] = 1, ["Fast MT"] = 10, ["Flare Gun"] = 8, ["Fueling Station Key"] = 4,
+    ["Garage Key"] = 4, ["Hammer"] = 1, ["JPC"] = 10, ["Lighthouse Key"] = 6, ["M4A1"] = 12,
+    ["Nails"] = 1, ["Nuts"] = 1, ["Saiga 12"] = 8, ["Super Glue"] = 1, ["Village Key"] = 4, ["Wrench"] = 1
+}
+
+local ValueSettings = {
+    [0] = Color3.fromRGB(255, 255, 255),
+    [4] = Color3.fromRGB(76, 187, 23),
+    [8] = Color3.fromRGB(218, 112, 214),
+    [16] = Color3.fromRGB(233, 116, 81),
+    [32] = Color3.fromRGB(255, 36, 0)
+}
+
+local validItemNames = {}
+local validNPCNames = {}
+getgenv().ItemIcons = getgenv().ItemIcons or {}
+
+local function CacheAssets()
+    local RS = game:GetService("ReplicatedStorage")
+    local lists = {RS:FindFirstChild("ItemsList"), RS:FindFirstChild("ItemList"), RS:FindFirstChild("ItemsListModels"), RS:FindFirstChild("AmmoTypes")}
+    local blacklist = {"MeshPart", "Part", "UnionOperation", "Weld", "WeldConstraint", "Mesh", "SpecialMesh", "HelmetMask", "Harness", "UT", "Hood", "RL", "LU", "RU", "LL", "RA", "LA", "TR", "HD", "Handle", "Casing", "ItemProperties", "Folder", "Configuration", "Model", "SelectionBox", "SurfaceAppearance", "Texture", "Decal"}
+
+    for _, list in pairs(lists) do
+        if list then
+            for _, obj in pairs(list:GetChildren()) do
+                if not table.find(blacklist, obj.Name) then
+                    validItemNames[obj.Name] = true
+                    local props = obj:FindFirstChild("ItemProperties")
+                    local icon = props and props:FindFirstChild("ItemIcon")
+                    if icon and (icon:IsA("ImageLabel") or icon:IsA("ImageButton")) then
+                        getgenv().ItemIcons[obj.Name] = icon.Image
+                    end
+                end
+            end
+        end
     end
+
+    local presets = RS:FindFirstChild("AiPresets")
+    if presets then
+        for _, v in pairs(presets:GetChildren()) do validNPCNames[v.Name] = true end
+    end
+end
+task.spawn(CacheAssets)
+
+function ESP:ScanInventory(Target)
+    local found = {}
+    if not Target or not next(validItemNames) then return found end
+    local blacklist = {"MeshPart", "Part", "UnionOperation", "Weld", "WeldConstraint", "Mesh", "SpecialMesh", "HelmetMask", "Harness", "UT", "Hood", "RL", "LU", "RU", "LL", "RA", "LA", "TR", "HD", "Handle", "Casing", "ItemProperties", "Folder", "Configuration", "SelectionBox", "SurfaceAppearance", "Texture", "Decal"}
+
+    local function scan(root)
+        if not root then return end
+        for _, v in pairs(root:GetDescendants()) do
+            if table.find(blacklist, v.Name) or table.find(blacklist, v.ClassName) then continue end
+            local itemName = (v:FindFirstChild("ItemProperties") and v.ItemProperties:GetAttribute("CallSign")) or v:GetAttribute("CallSign") or (validItemNames[v.Name] and v.Name)
+            if itemName and validItemNames[itemName] and not table.find(found, itemName) then
+                table.insert(found, itemName)
+            end
+        end
+    end
+
+    if Target:IsA("Player") then
+        scan(Target.Character)
+        local bp = Target:FindFirstChild("Backpack")
+        if bp then scan(bp) end
+        local rsPlayers = game:GetService("ReplicatedStorage"):FindFirstChild("Players")
+        local pFolder = rsPlayers and rsPlayers:FindFirstChild(Target.Name)
+        if pFolder and pFolder:FindFirstChild("Inventory") then scan(pFolder.Inventory) end
+    elseif Target:IsA("Model") then
+        scan(Target)
+        local plr = Players:GetPlayerFromCharacter(Target)
+        if plr then return self:ScanInventory(plr) end
+    end
+    return found
+end
+
+function ESP:IsAlive(Player)
+    if Player and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") and Player.Character:FindFirstChild("Humanoid") and Player.Character.Humanoid.Health > 0 then
+        return true
+    end
+    return false
+end
+
+local function create(class, properties)
+    local drawing = Drawing.new(class)
+    for property, value in pairs(properties) do drawing[property] = value end
+    return drawing
+end
+
+local function getLootInfo(target)
+    local items = ESP:ScanInventory(target)
+    local total = 0
+    local text = ""
+    for _, item in pairs(items) do
+        local val = ValueCache[item] or 0
+        total = total + val
+        text = text .. item .. "\n"
+    end
+    
+    local color = Color3.new(1,1,1)
+    local highest = -1
+    for i, v in pairs(ValueSettings) do
+        if total >= i and i > highest then color = v; highest = i end
+    end
+    
+    return total, text, color
+end
+
+local function StartESP()
+    local bones = {
+        {"Head", "UpperTorso"},{"UpperTorso", "RightUpperArm"},{"RightUpperArm", "RightLowerArm"},{"RightLowerArm", "RightHand"},
+        {"UpperTorso", "LeftUpperArm"},{"LeftUpperArm", "LeftLowerArm"},{"LeftLowerArm", "LeftHand"},{"UpperTorso", "LowerTorso"},
+        {"LowerTorso", "LeftUpperLeg"},{"LeftUpperLeg", "LeftLowerLeg"},{"LeftLowerLeg", "LeftFoot"},{"LowerTorso", "RightUpperLeg"},
+        {"RightUpperLeg", "RightLowerLeg"},{"RightLowerLeg", "RightFoot"}
+    }
 
     local function createEsp(player)
         ESP.Cache[player] = {
@@ -42,7 +163,8 @@ local function StartESP()
             health = create("Line", {Thickness = 1}),
             distance = create("Text", {Color = Color3.new(1, 1, 1), Size = 12, Outline = true, Center = true}),
             boxLines = {},
-            skeletonlines = {}
+            skeletonlines = {},
+            loot = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false})
         }
     end
 
@@ -162,11 +284,92 @@ local function StartESP()
                             esp.tracer.Visible, esp.tracer.From, esp.tracer.To = true, Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y), Vector2.new(hrp2D.X, hrp2D.Y)
                             esp.tracer.Color = getgenv().TracerColor or Color3.new(1,1,1)
                         else esp.tracer.Visible = false end
+
+                        if getgenv().PlayerLootESP then
+                            local total, lootText, lootColor = getLootInfo(player)
+                            esp.loot.Text = string.format("$%d\n%s", total, lootText)
+                            esp.loot.Color = lootColor
+                            esp.loot.Position = Vector2.new(hrp2D.X, hrp2D.Y + 45)
+                            esp.loot.Visible = true
+                        else esp.loot.Visible = false end
                     else hideEsp(esp) end
                 else hideEsp(esp) end
             else hideEsp(esp) end
         end
     end
+
+    -- Funciones de World ESP
+    local function DrawWorldObject(obj, settings_flag, dist_flag, tag, color_default)
+        local text = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false})
+        local lastScan = 0
+        local total, lootText, lootColor = 0, "", color_default
+
+        local conn;
+        conn = RunService.RenderStepped:Connect(function()
+            if not getgenv()[settings_flag] or not ESP:IsAlive(localPlayer) then text.Visible = false; return end
+            local root = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head") or obj:FindFirstChildWhichIsA("BasePart")) or (obj:IsA("BasePart") and obj)
+            if not root then text.Visible = false; return end
+
+            local dist = (root.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if dist > (getgenv()[dist_flag] or 1000) then text.Visible = false; return end
+
+            local pos, onScreen = camera:WorldToViewportPoint(root.Position)
+            if not onScreen then text.Visible = false; return end
+
+            if tick() - lastScan > 2 then
+                lastScan = tick()
+                if settings_flag == "ContainerESP" or settings_flag == "NPC_ESP" then
+                    total, lootText, lootColor = getLootInfo(obj)
+                else
+                    total, lootText, lootColor = 0, "", color_default
+                end
+            end
+
+            local name = obj:GetAttribute("DisplayName") or obj:GetAttribute("CallSign") or obj.Name
+            local extra = ""
+            if settings_flag == "NPC_ESP" then
+                local hum = obj:FindFirstChildOfClass("Humanoid")
+                if hum then extra = string.format("\nHP: %d/%d", math.round(hum.Health), math.round(hum.MaxHealth)) end
+            end
+
+            text.Color = lootColor
+            text.Position = Vector2.new(pos.X, pos.Y)
+            text.Text = string.format("%s %s%s\n$%d\n%s%d studs", tag, name, extra, total, lootText, math.round(dist))
+            text.Visible = true
+        end)
+
+        obj.AncestryChanged:Connect(function() if not obj.Parent then text:Remove(); conn:Disconnect() end end)
+        table.insert(ESP.Connections, conn)
+    end
+
+    -- Inicializar watchers de carpetas
+    local function SetupFolder(folderName, settings_flag, dist_flag, tag, color)
+        task.spawn(function()
+            local folder = workspace:WaitForChild(folderName, 10)
+            if folder then
+                for _, v in pairs(folder:GetChildren()) do DrawWorldObject(v, settings_flag, dist_flag, tag, color) end
+                folder.ChildAdded:Connect(function(v) DrawWorldObject(v, settings_flag, dist_flag, tag, color) end)
+            end
+        end)
+    end
+
+    SetupFolder("Containers", "ContainerESP", "ContainerRenderDistance", "[CONTAINER]", Color3.new(1,1,1))
+    SetupFolder("Vehicles", "Vehicle_ESP", "VehicleRenderDistance", "[VEHICLE]", Color3.fromRGB(255, 255, 0))
+    SetupFolder("DroppedItems", "DroppedItemESP", "DroppedItemRenderDistance", "[ITEM]", Color3.new(0, 1, 1))
+    
+    -- NPCs (AIs y AiZones)
+    task.spawn(function()
+        local ais = workspace:WaitForChild("AIs", 10)
+        if ais then
+            for _, v in pairs(ais:GetChildren()) do DrawWorldObject(v, "NPC_ESP", "NPCRenderDistance", "[AI]", Color3.fromRGB(255, 70, 70)) end
+            ais.ChildAdded:Connect(function(v) DrawWorldObject(v, "NPC_ESP", "NPCRenderDistance", "[AI]", Color3.fromRGB(255, 70, 70)) end)
+        end
+        local zones = workspace:FindFirstChild("AiZones")
+        if zones then
+            for _, v in pairs(zones:GetDescendants()) do if v:IsA("Model") then DrawWorldObject(v, "NPC_ESP", "NPCRenderDistance", "[AI]", Color3.fromRGB(255, 70, 70)) end end
+            zones.DescendantAdded:Connect(function(v) if v:IsA("Model") then DrawWorldObject(v, "NPC_ESP", "NPCRenderDistance", "[AI]", Color3.fromRGB(255, 70, 70)) end end)
+        end
+    end)
 
     ESP.Connections.Add = Players.PlayerAdded:Connect(function(p) if p ~= localPlayer then createEsp(p) end end)
     ESP.Connections.Remove = Players.PlayerRemoving:Connect(removeEsp)
@@ -197,5 +400,6 @@ function ESP:Unload()
     end
     self.Cache = {}
 end
+
 
 return ESP

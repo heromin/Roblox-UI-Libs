@@ -126,20 +126,56 @@ end)
 
 if BulletModule and BulletModule.CreateBullet then
     local OldBullet; OldBullet = hookfunction(BulletModule.CreateBullet, newcclosure(function(...)
-    local Args          = {...};
-    local Target, Part  = getClosestPlayerToMouse();
-    
-    if not checkcaller() and Args[5] and typeof(Args[5]) == "Instance" then
-        local Success, ShotCFrame = pcall(function() return Args[5].CFrame end)
-        if not Success then return OldBullet(table.unpack(Args)) end
+        local Args          = {...};
+        local Target, Part  = getClosestPlayerToMouse();
+        
+        if not checkcaller() and Args[5] and typeof(Args[5]) == "Instance" then
+            local Success, ShotCFrame = pcall(function() return Args[5].CFrame end)
+            if not Success then return OldBullet(table.unpack(Args)) end
 
-        if Target and Part and getgenv().SilentAImUser then 
-            ShotCFrame = CFrame.new(ShotCFrame.Position, Part.Position)
-            Args[5].CFrame = ShotCFrame
+            if Target and Part and getgenv().SilentAImUser then 
+                ShotCFrame = CFrame.new(ShotCFrame.Position, Part.Position)
+                Args[5].CFrame = ShotCFrame
+            end;
+
+            task.spawn(function()
+                local CombatFuncs = getgenv().CombatFunctions
+                if not CombatFuncs then return end
+                
+                pcall(function()
+                    local Origin = ShotCFrame.Position
+                    local Direction = ShotCFrame.LookVector * 1500
+                    local RayParams = RaycastParams.new()
+                    RayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    RayParams.FilterDescendantsInstances = {LocalPlayer.Character, Camera}
+                    
+                    local Result = workspace:Raycast(Origin, Direction, RayParams)
+                    local EndPos = Result and Result.Position or (Origin + Direction)
+
+                    if Result and Result.Instance then
+                        local Character = Result.Instance:FindFirstAncestorOfClass("Model")
+                        local Player = Character and Players:GetPlayerFromCharacter(Character)
+                        local IsNPC = Character and Character:FindFirstChildOfClass("Humanoid")
+                        
+                        if (Player and Player ~= LocalPlayer) or (IsNPC and not Player) then
+                            if CombatFuncs.PlayHitSound then CombatFuncs:PlayHitSound() end
+                            if CombatFuncs.FlashCenterHitmarker then CombatFuncs:FlashCenterHitmarker() end
+                            if CombatFuncs.CreateHitMarker then CombatFuncs:CreateHitMarker(Result.Instance, Result.Position) end
+                            if CombatFuncs.CreateHitLog then 
+                                local targetName = Player and Player.Name or (Character and Character.Name or "Unknown")
+                                CombatFuncs:CreateHitLog(Result.Instance.Name, targetName)
+                            end
+                        end
+                    end
+
+                    if getgenv().BulletTracers and CombatFuncs.CreateTracer then
+                        CombatFuncs:CreateTracer(Origin, EndPos)
+                    end
+                end)
+            end)
         end;
-    end;
-    
-    return OldBullet(table.unpack(Args))
+        
+        return OldBullet(table.unpack(Args))
     end));
     print("[COMBAT] Silent Aim Hooked successfully.")
 end

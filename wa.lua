@@ -319,7 +319,10 @@ function Library:CreateWindow(title, subtitle)
             Column.Size = UDim2.new(1, 0, 1, 0)
             Column.BackgroundTransparency = 1
             Column.CanvasSize = UDim2.new(0, 0, 0, 0)
-            Column.ScrollBarThickness = 0
+            Column.AutomaticCanvasSize = Enum.AutomaticSize.Y
+            Column.ScrollBarThickness = 2
+            Column.ScrollBarImageColor3 = colors.tabActiveIndicator
+            Column.Active = true
             Column.Parent = Page
             local ColLayout = Instance.new("UIListLayout")
             ColLayout.Padding = UDim.new(0, 8)

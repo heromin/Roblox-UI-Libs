@@ -1021,3 +1021,5 @@ function Library:CreateWindow(title, subtitle)
 
     return tabs
 end
+
+return Library

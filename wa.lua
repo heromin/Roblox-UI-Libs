@@ -736,6 +736,50 @@ function Library:CreateWindow(title, subtitle)
             return SliderFrame
         end
 
+        -- Textbox (Nuevo componente)
+        function elements:AddTextbox(section, text, default, callback)
+            local TextboxFrame = Instance.new("Frame")
+            TextboxFrame.Size = UDim2.new(1, 0, 0, 45)
+            TextboxFrame.BackgroundTransparency = 1
+            TextboxFrame.Parent = section
+
+            local Label = Instance.new("TextLabel")
+            Label.Text = text
+            Label.Size = UDim2.new(1, 0, 0, 15)
+            Label.TextColor3 = colors.textDim
+            Label.Font = fonts.main
+            Label.TextSize = 12
+            Label.BackgroundTransparency = 1
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.Parent = TextboxFrame
+
+            local InputFrame = Instance.new("Frame")
+            InputFrame.Size = UDim2.new(1, 0, 0, 25)
+            InputFrame.Position = UDim2.new(0, 0, 0, 20)
+            InputFrame.BackgroundColor3 = colors.background
+            InputFrame.BorderSizePixel = 0
+            InputFrame.Parent = TextboxFrame
+            Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 4)
+            local iStroke = Instance.new("UIStroke", InputFrame)
+            iStroke.Color = colors.border
+
+            local TextBox = Instance.new("TextBox")
+            TextBox.Size = UDim2.new(1, -10, 1, 0)
+            TextBox.Position = UDim2.new(0, 5, 0, 0)
+            TextBox.BackgroundTransparency = 1
+            TextBox.Text = default or ""
+            TextBox.PlaceholderText = "..."
+            TextBox.TextColor3 = colors.text
+            TextBox.Font = fonts.main
+            TextBox.TextSize = 12
+            TextBox.TextXAlignment = Enum.TextXAlignment.Left
+            TextBox.Parent = InputFrame
+
+            TextBox.FocusLost:Connect(function()
+                if callback then pcall(callback, TextBox.Text) end
+            end)
+        end
+
         -- Color Picker (Nuevo componente)
         function elements:AddColorPicker(section, text, default, callback)
             local colorValue = default or Color3.fromRGB(255, 255, 255)
@@ -1021,5 +1065,5 @@ function Library:CreateWindow(title, subtitle)
 
     return tabs
 end
-
+return library
 return Library

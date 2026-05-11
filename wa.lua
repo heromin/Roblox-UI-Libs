@@ -737,6 +737,7 @@ function Library:CreateWindow(title, subtitle)
         end
 
         -- Textbox (Nuevo componente)
+        -- Textbox component
         function elements:AddTextbox(section, text, default, callback)
             local TextboxFrame = Instance.new("Frame")
             TextboxFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -778,6 +779,11 @@ function Library:CreateWindow(title, subtitle)
             TextBox.FocusLost:Connect(function()
                 if callback then pcall(callback, TextBox.Text) end
             end)
+
+            return {
+                Set = function(_, val) TextBox.Text = val; if callback then callback(val) end end,
+                Get = function() return TextBox.Text end
+            }
         end
 
         -- Color Picker (Nuevo componente)
@@ -1065,5 +1071,4 @@ function Library:CreateWindow(title, subtitle)
 
     return tabs
 end
-return library
 return Library

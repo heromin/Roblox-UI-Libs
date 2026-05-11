@@ -2,14 +2,18 @@
 local InventoryViewer = {
     Enabled = false,
     Target = nil,
-    Connections = {}
+    Connections = {},
+    ItemCache = {}
 }
 
 local userInputService = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
+local runService = game:GetService("RunService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
 local coreGui = game:GetService("CoreGui")
 local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
+local camera = workspace.CurrentCamera
 
 -- Colores extraídos de wa.lua para consistencia
 local colors = {
@@ -21,7 +25,32 @@ local colors = {
     textDim = Color3.fromRGB(140, 140, 145),
 }
 
+-- Función para indexar qué ítems existen en el juego según pedido
+function InventoryViewer:CacheGameItems()
+    local folders = {
+        replicatedStorage:FindFirstChild("AmmoTypes"),
+        replicatedStorage:FindFirstChild("ItemsList"),
+        replicatedStorage:FindFirstChild("ItemsListModels")
+    }
+
+    for _, folder in ipairs(folders) do
+        if folder then
+            for _, item in ipairs(folder:GetChildren()) do
+                self.ItemCache[item.Name] = true
+                -- Intentar capturar iconos si existen en las propiedades
+                local props = item:FindFirstChild("ItemProperties")
+                local icon = props and props:FindFirstChild("ItemIcon")
+                if icon and (icon:IsA("ImageLabel") or icon:IsA("ImageButton")) then
+                    -- Podríamos guardar el ID aquí si quisiéramos usarlo luego
+                end
+            end
+        end
+    end
+end
+
 function InventoryViewer:Init()
+    self:CacheGameItems()
+
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "InventoryViewer_WA"
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -119,25 +148,78 @@ function InventoryViewer:Init()
         if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
 
+    -- Auto-Update Loop: Reacciona según a quién ves
+    task.spawn(function()
+        while task.wait(0.3) do
+            if self.Enabled then
+                local target = self:GetClosestPlayerToMouse()
+                if target then
+                    local items = self:ScanPlayerInventory(target)
+                    self:Update(target, items)
+                else
+                    self:Update(nil, {})
+                end
+            end
+        end
+    end)
+
     return self
+end
+
+function InventoryViewer:GetClosestPlayerToMouse()
+    local shortestDistance = math.huge
+    local closestPlayer = nil
+    local mousePos = userInputService:GetMouseLocation()
+
+    for _, player in ipairs(players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local head = player.Character:FindFirstChild("Head")
+            if head then
+                local pos, onScreen = camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                    if distance < shortestDistance and distance < 150 then -- Radio de 150px
+                        shortestDistance = distance
+                        closestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+function InventoryViewer:ScanPlayerInventory(player)
+    local foundItems = {}
+    -- Buscar en ReplicatedStorage > NombreJugador > Inventory
+    local playerFolder = replicatedStorage:FindFirstChild(player.Name)
+    local invFolder = playerFolder and playerFolder:FindFirstChild("Inventory")
+
+    if invFolder then
+        for _, item in ipairs(invFolder:GetChildren()) do
+            -- Verificamos contra nuestro caché si es un item válido del juego
+            if self.ItemCache[item.Name] then
+                table.insert(foundItems, item.Name)
+            end
+        end
+    end
+    return foundItems
 end
 
 function InventoryViewer:SetVisible(state)
     self.Enabled = state
     if self.MainFrame then
         self.MainFrame.Visible = state
+        self.Gui.Enabled = state
     end
 end
 
 function InventoryViewer:Update(targetPlayer, itemsTable)
-    if not self.Enabled then return end
     self.Target = targetPlayer
     self.Title.Text = "INV: " .. (targetPlayer and targetPlayer.Name:upper() or "NONE")
     
     -- Limpiar items anteriores
-    for _, v in pairs(self.Container:GetChildren()) do
-        if v:IsA("Frame") then v:Destroy() end
-    end
+    for _, v in ipairs(self.Container:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
 
     -- Crear nuevos cuadros de items
     for _, itemName in ipairs(itemsTable or {}) do
@@ -158,6 +240,7 @@ function InventoryViewer:Update(targetPlayer, itemsTable)
         Label.TextScaled = true
         Label.Font = Enum.Font.Code
         Label.Parent = ItemFrame
+        ItemFrame.Name = itemName -- Para debug
     end
 end
 

@@ -244,14 +244,37 @@ function InventoryViewer:Init(invListRef)
     self.Title = TitleLabel
     Create("Frame", {Parent = TitleBar, Size = UDim2.new(1, 0, 0, 2), Position = UDim2.new(0, 0, 1, -2), BackgroundColor3 = colors.tabActiveIndicator, BorderSizePixel = 0})
 
-    local StatsContainer = Create("Frame", {Name = "Stats", Parent = MainFrame, Size = UDim2.new(1, -10, 0, 55), Position = UDim2.new(0, 5, 0, 35), BackgroundTransparency = 1})
+    local StatsContainer = Create("Frame", {Name = "Stats", Parent = MainFrame, Size = UDim2.new(1, -10, 0, 75), Position = UDim2.new(0, 5, 0, 35), BackgroundTransparency = 1})
     Create("UIListLayout", {Parent = StatsContainer, Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder})
 
-    self.HealthLabel = self:CreateStatsLabel(StatsContainer, "HP: 100/100")
+    local HealthContainer = Create("Frame", {
+        Name = "HealthContainer",
+        Parent = StatsContainer,
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1
+    })
+
+    self.HealthValueLabel = Create("TextLabel", {
+        Parent = HealthContainer,
+        Size = UDim2.new(1, 0, 0, 10),
+        Position = UDim2.new(0, 0, 0, 0),
+        TextColor3 = colors.text,
+        TextSize = 10,
+        Font = fonts.main,
+        Text = "HP: 100/100",
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+
+    local HealthBarBg = Create("Frame", {Parent = HealthContainer, Size = UDim2.new(1, 0, 0, 4), Position = UDim2.new(0, 0, 0, 12), BackgroundColor3 = colors.secondary})
+    Create("UICorner", {Parent = HealthBarBg, CornerRadius = UDim.new(0, 2)})
+    self.HealthBarFill = Create("Frame", {Parent = HealthBarBg, Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(0, 255, 127)})
+    Create("UICorner", {Parent = self.HealthBarFill, CornerRadius = UDim.new(0, 2)})
+
     self.WeaponLabel = self:CreateStatsLabel(StatsContainer, "Tool: None")
+    self.LastWeaponLabel = self:CreateStatsLabel(StatsContainer, "Last Tool: None")
     self.ExtraLabel = self:CreateStatsLabel(StatsContainer, "SPD: 16 | DIST: 0")
 
-    local InvScroll = Create("ScrollingFrame", {Parent = MainFrame, Size = UDim2.new(1, -10, 0, 130), Position = UDim2.new(0, 5, 0, 95), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarImageColor3 = colors.tabActiveIndicator})
+    local InvScroll = Create("ScrollingFrame", {Parent = MainFrame, Size = UDim2.new(1, -10, 0, 130), Position = UDim2.new(0, 5, 0, 115), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarImageColor3 = colors.tabActiveIndicator})
     self.InvScroll = InvScroll
     Create("UIGridLayout", {Parent = InvScroll, CellPadding = UDim2.new(0, 4, 0, 4), CellSize = UDim2.new(0, 37, 0, 37)})
     
@@ -295,19 +318,26 @@ function InventoryViewer:Init(invListRef)
                 if getgenv().TargetHUDEnabled then
                     StatsContainer.Visible = true
                     local hp, mhp = math.round(hum.Health), math.round(hum.MaxHealth)
-                    self.HealthLabel.Text = string.format("HP: %d/%d", hp, mhp)
+                    local hpPct = math.clamp(hp / mhp, 0, 1)
+                    self.HealthValueLabel.Text = string.format("HP: %d/%d", hp, mhp)
+                    tweenService:Create(self.HealthBarFill, TweenInfo.new(0.2), {Size = UDim2.new(hpPct, 0, 1, 0), BackgroundColor3 = Color3.fromHSV(hpPct * 0.3, 1, 1)}):Play()
 
                     -- Búsqueda de tool equipado en ReplicatedStorage siguiendo la ruta solicitada
                     local toolName = "None"
+                    local lastToolName = "None"
                     local rsPlayers = replicatedStorage:FindFirstChild("Players")
                     local playerRS = rsPlayers and rsPlayers:FindFirstChild(targetPlayer.Name)
                     local gVariables = playerRS and playerRS:FindFirstChild("Status") and playerRS.Status:FindFirstChild("GameplayVariables")
-                    local equippedVal = gVariables and gVariables:FindFirstChild("EquippedTool")
-
-                    if equippedVal and equippedVal:IsA("ObjectValue") and equippedVal.Value then
-                        toolName = equippedVal.Value.Name
+                    
+                    if gVariables then
+                        local equippedVal = gVariables:FindFirstChild("EquippedTool")
+                        if equippedVal and equippedVal:IsA("ObjectValue") and equippedVal.Value then toolName = equippedVal.Value.Name end
+                        
+                        local lastEquippedVal = gVariables:FindFirstChild("LastEquippedTool")
+                        if lastEquippedVal and lastEquippedVal:IsA("ObjectValue") and lastEquippedVal.Value then lastToolName = lastEquippedVal.Value.Name end
                     end
                     self.WeaponLabel.Text = "Tool: " .. toolName
+                    self.LastWeaponLabel.Text = "Last Tool: " .. lastToolName
 
                     local dist = (localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("HumanoidRootPart")) and (localPlayer.Character.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude or 0
                     self.ExtraLabel.Text = string.format("SPD: %.1f | DIST: %d", hum.WalkSpeed, math.round(dist))
@@ -324,8 +354,8 @@ function InventoryViewer:Init(invListRef)
                         if self.InvListRef then local dL = {unpack(items)}; table.insert(dL, 1, "[" .. self.Title.Text .. "]"); self.InvListRef:Refresh(dL) end
                     end
                 else InvScroll.Visible = false end
-                MainFrame.Size = UDim2.new(0, 180, 0, 26 + (StatsContainer.Visible and 65 or 0) + (InvScroll.Visible and 130 or 0))
-                InvScroll.Position = UDim2.new(0, 5, 0, StatsContainer.Visible and 95 or 35)
+                MainFrame.Size = UDim2.new(0, 180, 0, 30 + (StatsContainer.Visible and 80 or 0) + (InvScroll.Visible and 135 or 0))
+                InvScroll.Position = UDim2.new(0, 5, 0, StatsContainer.Visible and 115 or 35)
             else
                 self.MainFrame.Visible = false; lastInvContent = ""
                 if self.InvListRef then self.InvListRef:Refresh({"No target found"}) end
@@ -334,6 +364,8 @@ function InventoryViewer:Init(invListRef)
     end)
     return self
 end
+
+-- Lógica de ejecución Standalone (Para pruebas rápidas)
 -- Para probarlo sin wa.lua, ejecuta: _G.InventoryTest = true; loadstring(...)()
 if _G.InventoryTest then
     getgenv().TargetHUDEnabled = true

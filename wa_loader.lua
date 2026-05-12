@@ -1,33 +1,42 @@
 --Functions Load
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa.lua"))()
-local Combat = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_aimbot%2Bsilentaim.lua"))()
+-- [ DEPENDENCIES ] --
+local Library     = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa.lua"))()
+local Combat      = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_aimbot%2Bsilentaim.lua"))()
 local CombatFuncs = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_hitimplementations.lua"))()
-local Inventory = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua"))()
-local esp = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
-local NPCAimbot = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua"))()
+local Inventory   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua"))()
+local esp         = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
+local NPCAimbot   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua"))()
 
--- Inicializar módulos dependientes
+-- [ SERVICES ] --
+local RunService = game:GetService("RunService")
+local UIS        = game:GetService("UserInputService")
+local Players    = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- [ INITIALIZATION ] --
 Inventory:Init()
 esp:Init()
 
--- Crear Ventana
-local Window = Library:CreateWindow("amber.lol", os.date("%b %d, %Y"))
-
--- Pestañas
-local TabCombat = Window:AddTab("Combat")
-local TabVisuals = Window:AddTab("Visual")
+-- [ WINDOW CONFIGURATION ] --
+local Window      = Library:CreateWindow("amber.lol", os.date("%b %d, %Y"))
+local TabCombat   = Window:AddTab("Combat")
+local TabVisuals  = Window:AddTab("Visual")
 local TabMovement = Window:AddTab("Movement")
-local TabPlayers = Window:AddTab("Players")
+local TabPlayers  = Window:AddTab("Players")
 local TabSettings = Window:AddTab("Settings")
 
--- --- PESTAÑA COMBAT ---
-local Aimbot_Section = TabCombat:AddSection("Aimbot Settings", "Left")
+-- ==========================================
+-- [ TAB: COMBAT ]
+-- ==========================================
+
+-- Main Aimbot
+local Aimbot_Section = TabCombat:AddSection("Aimbot", "Left")
 TabCombat:AddCheckbox(Aimbot_Section, "Enable Aimbot", false, function(state) getgenv().isAimbotEnabled = state end):AddKeybind(Enum.KeyCode.F)
 TabCombat:AddCheckbox(Aimbot_Section, "Silent Aim", false, function(state) getgenv().SilentAImUser = state end):AddKeybind(Enum.KeyCode.G)
 TabCombat:AddDropdown(Aimbot_Section, "Target Part", {"Head", "HumanoidRootPart", "UpperTorso"}, "Head", function(val) getgenv().AimbotTargetPart = val end)
 TabCombat:AddSlider(Aimbot_Section, "Smoothness", 1, 20, 1, function(val) getgenv().AimbotSmoothness = val end)
 
-local Triggerbot_Section = TabCombat:AddSection("Triggerbot", "Left")
+local Triggerbot_Section = TabCombat:AddSection("Triggerbot", "Right")
 TabCombat:AddCheckbox(Triggerbot_Section, "Enable Triggerbot", false, function(state) getgenv().TriggerbotEnabled = state end):AddKeybind(Enum.KeyCode.T)
 TabCombat:AddSlider(Triggerbot_Section, "Delay (s)", 0, 1, 0, function(val) getgenv().TriggerbotDelay = val end)
 
@@ -37,17 +46,19 @@ TabCombat:AddCheckbox(Checks_Section, "Wall Check", false, function(state) getge
 TabCombat:AddCheckbox(Checks_Section, "Show FOV", false, function(state) getgenv().drawFOV = state end)
 TabCombat:AddSlider(Checks_Section, "FOV Radius", 30, 500, 50, function(val) getgenv().fovRadius = val end)
 
-local NPCAimbot_Section = TabCombat:AddSection("NPC Combat", "Right")
+-- NPC Combat
+local NPCAimbot_Section = TabCombat:AddSection("NPC Combat", "Left")
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Aimbot", false, function(state) getgenv().NPCAimbotEnabled = state end):AddKeybind(Enum.KeyCode.H)
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Silent Aim", false, function(state) getgenv().NPCSilentAimEnabled = state end):AddKeybind(Enum.KeyCode.J)
 TabCombat:AddDropdown(NPCAimbot_Section, "NPC Target Part", {"Head", "HumanoidRootPart", "UpperTorso"}, "Head", function(val) getgenv().NPCTargetPart = val end)
 TabCombat:AddSlider(NPCAimbot_Section, "NPC Smoothness", 1, 20, 1, function(val) getgenv().NPCAimbotSmoothness = val end)
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Wall Check", false, function(state) getgenv().NPCWallCheck = state end)
-TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Show FOV", false, function(state) getgenv().NPCShowFOV = state end)
-TabCombat:AddSlider(NPCAimbot_Section, "NPC FOV Radius", 30, 500, 100, function(val) getgenv().NPCFOVRadius = val end)
 
--- --- PESTAÑA VISUALS ---
-local PlayerESP_Section = TabVisuals:AddSection("Player ESP", "Left")
+-- ==========================================
+-- [ TAB: VISUALS ]
+-- ==========================================
+
+local PlayerESP_Section = TabVisuals:AddSection("Players", "Left")
 TabVisuals:AddCheckbox(PlayerESP_Section, "Enable ESP", false, function(state)
     getgenv().ESP_Enabled = state
 end):AddKeybind(Enum.KeyCode.V)
@@ -64,7 +75,7 @@ TabVisuals:AddSlider(PlayerESP_Section, "Max Distance", 100, 5000, 2000, functio
 TabVisuals:AddCheckbox(PlayerESP_Section, "Team Check", false, function(state) getgenv().TeamCheck = state end)
 TabVisuals:AddCheckbox(PlayerESP_Section, "Wall Check", false, function(state) getgenv().WallCheck = state end)
 
-local WorldESP_Section = TabVisuals:AddSection("World ESP", "Left")
+local WorldESP_Section = TabVisuals:AddSection("Environment", "Left")
 TabVisuals:AddCheckbox(WorldESP_Section, "Container ESP", false, function(state) getgenv().ContainerESP = state end):AddKeybind(Enum.KeyCode.P)
 TabVisuals:AddSlider(WorldESP_Section, "Container Distance", 100, 2000, 200, function(val) getgenv().ContainerRenderDistance = val end)
 TabVisuals:AddCheckbox(WorldESP_Section, "Vehicle ESP", false, function(state) getgenv().Vehicle_ESP = state end)
@@ -91,7 +102,7 @@ TabVisuals:AddSlider(Hitmarkers_Section, "Size", 1, 30, 7, function(val) getgenv
 TabVisuals:AddSlider(Hitmarkers_Section, "Lifetime", 0.1, 2, 0.4, function(val) getgenv().HitmarkersLifetime = val end)
 TabVisuals:AddColorPicker(Hitmarkers_Section, "Marker Color", Color3.fromRGB(255, 255, 255), function(color) getgenv().HitmarkersColor = color end)
 
-local HitFeedback_Section = TabVisuals:AddSection("Hit Feedback", "Right")
+local HitFeedback_Section = TabVisuals:AddSection("Feedback", "Right")
 TabVisuals:AddCheckbox(HitFeedback_Section, "Hit Sounds", false, function(state) getgenv().HitSound = state end)
 TabVisuals:AddDropdown(HitFeedback_Section, "Sound Type", {"Bell", "Skeet", "Neverlose", "Metallic", "Bubble"}, "Bell", function(val) getgenv().SelectedHitSound = val end)
 TabVisuals:AddSlider(HitFeedback_Section, "Sound Volume", 0, 10, 2, function(val) getgenv().HitSoundVolume = val end)
@@ -108,13 +119,14 @@ TabVisuals:AddSlider(Camera_Section, "Field of View", 70, 120, 90, function(val)
     workspace.CurrentCamera.FieldOfView = val
 end)
 
--- --- PESTAÑA MOVEMENT ---
-local MainMove_Section = TabMovement:AddSection("Movement Utils", "Left")
+-- ==========================================
+-- [ TAB: MOVEMENT ]
+-- ==========================================
+
+local MainMove_Section = TabMovement:AddSection("Utilities", "Left")
 TabMovement:AddCheckbox(MainMove_Section, "Enable Fly", false, function(Value) 
     getgenv().FlyEnabled = Value
-    local Player = game.Players.LocalPlayer
-    local Character = Player.Character
-    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
+    local Character, RootPart = LocalPlayer.Character, (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart"))
     
     if Value and RootPart then
         local vel = Instance.new("BodyVelocity")
@@ -158,25 +170,26 @@ TabMovement:AddButton(ExtraMove_Section, "Reset Velocity", function()
     end
 end)
 
--- --- PESTAÑA PLAYERS ---
+-- ==========================================
+-- [ TAB: PLAYERS ]
+-- ==========================================
+
 local Players_Section = TabPlayers:AddSection("Target Tools", "Left")
-TabPlayers:AddCheckbox(Players_Section, "Target HUD", false, function(state) 
-    getgenv().TargetHUDEnabled = state 
-end)
+TabPlayers:AddCheckbox(Players_Section, "Target HUD", false, function(state) getgenv().TargetHUDEnabled = state end)
 TabPlayers:AddButton(Players_Section, "Toggle Inventory Viewer", function()
     getgenv().InventoryViewerEnabled = not getgenv().InventoryViewerEnabled
 end)
--- --- PESTAÑA SETTINGS ---
-local Settings_Section = TabSettings:AddSection("Menu Config", "Left")
 
-TabSettings:AddButton(Settings_Section, "Minimize UI", function()
-    Window:SetOpen(false)
+-- ==========================================
+-- [ TAB: SETTINGS ]
+-- ==========================================
+
+local Settings_Section = TabSettings:AddSection("Configuration", "Left")
+TabSettings:AddButton(Settings_Section, "Minimize UI", function() Window:SetOpen(false) end)
+TabSettings:AddCheckbox(Settings_Section, "Menu Visible", true, function(state) Window:SetOpen(state) end):AddKeybind(Enum.KeyCode.RightShift)
+TabSettings:AddButton(Settings_Section, "Test Notification", function()
+    Library:Notify("Amber UI", "Notification working correctly!", 5)
 end)
-
-TabSettings:AddCheckbox(Settings_Section, "Menu Visible", true, function(state)
-    Window:SetOpen(state)
-end):AddKeybind(Enum.KeyCode.RightShift)
-
 TabSettings:AddCheckbox(Settings_Section, "Show Keybind List", false, function(state)
     if Library.KeybindList then Library.KeybindList.Main.Visible = state end
 end)
@@ -192,15 +205,15 @@ TabSettings:AddColorPicker(Theme_Section, "Accent Color", Color3.fromRGB(230, 40
     print("New Theme Color Selected")
 end)
 
--- Notificación de carga
+-- [ LOAD NOTIFICATION ] --
 Library:UpdateKeybindList("AmberLoad", "Amber Loaded", "HOME", true, true)
 task.delay(2, function()
     Library:UpdateKeybindList("AmberLoad", "Amber Loaded", "HOME", false, true)
 end)
 
--- Movement Control Loop (Lógica extraída de inari updrage)
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+-- ==========================================
+-- [ MOVEMENT CONTROL LOOP ]
+-- ==========================================
 
 RunService.RenderStepped:Connect(function(deltaTime)
     local Player = game.Players.LocalPlayer
@@ -209,12 +222,12 @@ RunService.RenderStepped:Connect(function(deltaTime)
     
     if not Character or not RootPart then return end
 
-    -- Third Person Logic (Control de cámara y transparencia)
+    -- Third Person Logic (Camera and transparency control)
     if getgenv().ThirdPersonEnabled then
         local camera = workspace.CurrentCamera
         camera.CFrame = camera.CFrame * CFrame.new(0, 0, getgenv().ThirdPersonDistance or 10)
         
-        -- Mostrar el personaje local y ocultar el viewmodel
+        -- Show local character and hide viewmodel
         for _, v in pairs(Character:GetDescendants()) do
             if v:IsA("BasePart") then v.LocalTransparencyModifier = 0 end
         end
@@ -233,10 +246,10 @@ RunService.RenderStepped:Connect(function(deltaTime)
         local humanoid = Character:FindFirstChildOfClass("Humanoid")
         
         if humanoid then
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Vector3.new(0, 0, -1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection + Vector3.new(0, 0, 1) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection + Vector3.new(-1, 0, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Vector3.new(1, 0, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Vector3.new(0, 0, -1) end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection + Vector3.new(0, 0, 1) end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection + Vector3.new(-1, 0, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Vector3.new(1, 0, 0) end
             
             if moveDirection.Magnitude > 0 then
                 moveDirection = moveDirection.Unit
@@ -247,16 +260,16 @@ RunService.RenderStepped:Connect(function(deltaTime)
         end
     end
 
-    -- Fly Implementation (Actualización de dirección y giro)
+    -- Fly Implementation (Direction and rotation update)
     if getgenv().FlyEnabled then
         local moveDirection = Vector3.new()
         
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Vector3.new(0, 0, -1) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection + Vector3.new(0, 0, 1) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection + Vector3.new(-1, 0, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Vector3.new(1, 0, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection + Vector3.new(0, -1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Vector3.new(0, 0, -1) end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection + Vector3.new(0, 0, 1) end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection + Vector3.new(-1, 0, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Vector3.new(1, 0, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection + Vector3.new(0, -1, 0) end
         
         if RootPart:FindFirstChild("FlyVelocity") then
             local camera = workspace.CurrentCamera
@@ -270,8 +283,8 @@ RunService.RenderStepped:Connect(function(deltaTime)
         end
     end
 
-    -- Spider Implementation (Escalar paredes)
-    if getgenv().SpiderEnabled and not getgenv().FlyEnabled and UserInputService:IsKeyDown(Enum.KeyCode.W) then
+    -- Spider Implementation (Wall climb)
+    if getgenv().SpiderEnabled and not getgenv().FlyEnabled and UIS:IsKeyDown(Enum.KeyCode.W) then
         local raycastParams = RaycastParams.new()
         raycastParams.FilterDescendantsInstances = {Character}
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -284,4 +297,5 @@ RunService.RenderStepped:Connect(function(deltaTime)
     end
 end)
 
-print("[AMBER] Example script fully integrated.")
+-- Welcome notification
+Library:Notify("amber.lol", "Script loaded successfully!", 5)

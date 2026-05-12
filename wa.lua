@@ -198,6 +198,61 @@ function Library:CreateKeybindList()
     self.KeybindList = {Main = Main, Container = Container}
 end
 
+function Library:Watermark(text)
+    if not self.ScreenGui then
+        self.ScreenGui = Instance.new("ScreenGui")
+        self.ScreenGui.Name = "AmberUI"
+        self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        self.ScreenGui.Parent = coreGui
+    end
+
+    local Main = Instance.new("Frame")
+    Main.Name = "Watermark"
+    Main.Size = UDim2.new(0, 0, 0, 22)
+    Main.Position = UDim2.new(0.5, 0, 0, 15)
+    Main.AnchorPoint = Vector2.new(0.5, 0)
+    Main.BackgroundColor3 = colors.background
+    Main.BorderSizePixel = 0
+    Main.AutomaticSize = Enum.AutomaticSize.X
+    Main.Parent = self.ScreenGui
+
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 4)
+    local Stroke = Instance.new("UIStroke", Main)
+    Stroke.Color = colors.border
+    Stroke.Thickness = 1
+
+    local Liner = Instance.new("Frame", Main)
+    Liner.Size = UDim2.new(1, 0, 0, 1)
+    Liner.Position = UDim2.new(0, 0, 1, -1)
+    Liner.BackgroundColor3 = colors.tabActiveIndicator
+    Liner.BorderSizePixel = 0
+    
+    local Label = Instance.new("TextLabel", Main)
+    Label.Size = UDim2.new(1, 0, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = colors.text
+    Label.Font = fonts.header
+    Label.TextSize = 12
+    Label.AutomaticSize = Enum.AutomaticSize.X
+    Label.Parent = Main
+    
+    local padding = Instance.new("UIPadding", Main)
+    padding.PaddingLeft = UDim.new(0, 8)
+    padding.PaddingRight = UDim.new(0, 8)
+
+    -- Draggable
+    local Dragging, DragInput, DragStart, StartPos
+    Main.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = true DragStart = input.Position StartPos = Main.Position end end)
+    userInputService.InputChanged:Connect(function(input) if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then local delta = input.Position - DragStart Main.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y) end end)
+    userInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+
+    return {
+        SetVisible = function(_, state) Main.Visible = state end,
+        SetText = function(_, newText) Label.Text = newText end
+    }
+end
+
 function Library:Unload()
     for _, connection in pairs(connections) do if connection.Connected then connection:Disconnect() end end
     connections = {}
@@ -479,6 +534,7 @@ function Library:CreateWindow(title, subtitle)
             SecLayout.Padding = UDim.new(0, 10) -- Solo UDim
             SecLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
             SecLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+            SecLayout.SortOrder = Enum.SortOrder.LayoutOrder
             SecLayout.Parent = Section
 
             local SecPadding = Instance.new("UIPadding")
@@ -490,6 +546,7 @@ function Library:CreateWindow(title, subtitle)
 
             local SecTitle = Instance.new("TextLabel")
             SecTitle.Text = title
+            SecTitle.LayoutOrder = -100
             SecTitle.Size = UDim2.new(1, 0, 0, 15)
             SecTitle.TextColor3 = colors.headerText
             SecTitle.Font = Enum.Font.SourceSansBold

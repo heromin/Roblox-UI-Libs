@@ -1,3 +1,4 @@
+-- Amber UI Library (Inspirada en image_0.png)
 local Library = {}
 
 local userInputService = game:GetService("UserInputService")
@@ -74,6 +75,76 @@ function Library:UpdateKeybindList(id, name, keyName, active, isButton)
     end
 end
 
+function Library:Notify(title, text, duration)
+    if not self.ScreenGui then
+        self.ScreenGui = Instance.new("ScreenGui")
+        self.ScreenGui.Name = "AmberUI"
+        self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        self.ScreenGui.Parent = coreGui
+    end
+
+    if not self.NotifContainer then
+        self.NotifContainer = Instance.new("Frame")
+        self.NotifContainer.Name = "Notifications"
+        self.NotifContainer.Size = UDim2.new(0, 250, 1, -20)
+        self.NotifContainer.Position = UDim2.new(1, -260, 0, 10)
+        self.NotifContainer.BackgroundTransparency = 1
+        self.NotifContainer.Parent = self.ScreenGui
+
+        local Layout = Instance.new("UIListLayout")
+        Layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+        Layout.Padding = UDim.new(0, 8)
+        Layout.SortOrder = Enum.SortOrder.LayoutOrder
+        Layout.Parent = self.NotifContainer
+    end
+
+    local Notification = Instance.new("Frame")
+    Notification.Size = UDim2.new(1, 0, 0, 0)
+    Notification.BackgroundColor3 = colors.background
+    Notification.BorderSizePixel = 0
+    Notification.ClipsDescendants = true
+    Notification.LayoutOrder = -os.time()
+    Notification.Parent = self.NotifContainer
+
+    Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 4)
+    local Stroke = Instance.new("UIStroke", Notification)
+    Stroke.Color = colors.tabActiveIndicator
+    Stroke.Thickness = 1.2
+    Stroke.Transparency = 0.4
+
+    local TitleLabel = Instance.new("TextLabel", Notification)
+    TitleLabel.Size = UDim2.new(1, -20, 0, 20)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 5)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = title:upper()
+    TitleLabel.TextColor3 = colors.tabActiveIndicator
+    TitleLabel.Font = fonts.header
+    TitleLabel.TextSize = 13
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    local TextLabel = Instance.new("TextLabel", Notification)
+    TextLabel.Size = UDim2.new(1, -20, 1, -30)
+    TextLabel.Position = UDim2.new(0, 10, 0, 25)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = text
+    TextLabel.TextColor3 = colors.text
+    TextLabel.Font = fonts.main
+    TextLabel.TextSize = 12
+    TextLabel.TextWrapped = true
+    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+
+    tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 60)}):Play()
+
+    task.delay(duration or 5, function()
+        local outTween = tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1})
+        outTween:Play()
+        outTween.Completed:Connect(function()
+            Notification:Destroy()
+        end)
+    end)
+end
+
 function Library:CreateKeybindList()
     local Main = Instance.new("Frame")
     Main.Name = "KeybindList"
@@ -138,11 +209,13 @@ function Library:CreateWindow(title, subtitle)
     local tabs = {}
     local tabCount = 0
     -- ScreenGui
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "AmberUI"
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.Parent = coreGui
-    self.ScreenGui = ScreenGui -- Store ScreenGui in Library for Unload
+    if not self.ScreenGui then
+        self.ScreenGui = Instance.new("ScreenGui")
+        self.ScreenGui.Name = "AmberUI"
+        self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        self.ScreenGui.Parent = coreGui
+    end
+    local ScreenGui = self.ScreenGui
 
     self:CreateKeybindList()
 

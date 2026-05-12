@@ -103,7 +103,7 @@ function ESP:ScanInventory(Target)
         local bp = Target:FindFirstChild("Backpack")
         if bp then scan(bp) end
         local rsPlayers = game:GetService("ReplicatedStorage"):FindFirstChild("Players")
-        local pFolder = rsPlayers and rsPlayers:FindFirstChild(Target.Name)
+        local pFolder = (rsPlayers and rsPlayers:FindFirstChild(Target.Name)) or game:GetService("ReplicatedStorage"):FindFirstChild(Target.Name)
         if pFolder and pFolder:FindFirstChild("Inventory") then scan(pFolder.Inventory) end
     elseif Target:IsA("Model") then
         scan(Target)
@@ -299,7 +299,7 @@ local function StartESP()
     end
 
     -- Funciones de World ESP
-    local function DrawWorldObject(obj, settings_flag, dist_flag, tag, color_default)
+    local function DrawWorldObject(obj, settings_flag, dist_flag, default_tag, color_default)
         local text = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false})
         local lastScan = 0
         local total, lootText, lootColor = 0, "", color_default
@@ -307,7 +307,7 @@ local function StartESP()
         local conn;
         conn = RunService.RenderStepped:Connect(function()
             if not getgenv()[settings_flag] or not ESP:IsAlive(localPlayer) then text.Visible = false; return end
-            local root = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head") or obj:FindFirstChildWhichIsA("BasePart")) or (obj:IsA("BasePart") and obj)
+            local root = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head") or obj:FindFirstChildWhichIsA("BasePart") or obj:FindFirstChild("Handle")) or (obj:IsA("BasePart") and obj)
             if not root then text.Visible = false; return end
 
             local dist = (root.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
@@ -326,15 +326,21 @@ local function StartESP()
             end
 
             local name = obj:GetAttribute("DisplayName") or obj:GetAttribute("CallSign") or obj.Name
+            local tag = default_tag
             local extra = ""
             if settings_flag == "NPC_ESP" then
+                if validNPCNames[name] or obj:GetAttribute("Preset") then tag = "[AI]"
+                elseif name:find("MON") or name:find("MINE") or name:find("Explosive") then tag = "[EXPLOSIVE]"
+                else tag = "[NPC]" end
+
                 local hum = obj:FindFirstChildOfClass("Humanoid")
                 if hum then extra = string.format("\nHP: %d/%d", math.round(hum.Health), math.round(hum.MaxHealth)) end
             end
 
             text.Color = lootColor
-            text.Position = Vector2.new(pos.X, pos.Y)
-            text.Text = string.format("%s %s%s\n$%d\n%s%d studs", tag, name, extra, total, lootText, math.round(dist))
+            text.Position = Vector2.new(pos.X, pos.Y - 20)
+            local lootDisplay = (total > 0) and string.format("\n$%d\n%s", total, lootText) or ""
+            text.Text = string.format("%s %s%s%s\n%d studs", tag, name, extra, lootDisplay, math.round(dist))
             text.Visible = true
         end)
 

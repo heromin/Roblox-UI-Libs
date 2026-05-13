@@ -7,7 +7,7 @@ local Inventory   = loadstring(game:HttpGet("https://raw.githubusercontent.com/h
 local esp         = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
 local NPCAimbot   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua"))()
 local GunMods     = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_gunmods.lua"))()
-local LightingMod = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_lightiningandmore.lua"))() -- Asumiendo carga local o remota
+local LightingMod = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_lightiningandmore.lua"))() 
 
 -- [ SERVICES ] --
 local RunService = game:GetService("RunService")

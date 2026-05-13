@@ -25,16 +25,21 @@ local function CacheNPCs()
 end
 task.spawn(CacheNPCs)
 
-local function isTargetableNPC(model)
-    if not model or not model:IsA("Model") then return false end
-    local hum = model:FindFirstChildOfClass("Humanoid")
-    if not (hum and hum.Health > 0) then return false end
+local function isTargetableNPC(obj)
+    if not obj or (not obj:IsA("Model") and not obj:IsA("BasePart")) then return false end
     
-    local name = model:GetAttribute("DisplayName") or model:GetAttribute("CallSign") or model.Name
-    if validNPCNames[name] or model:GetAttribute("Preset") then return true end
+    -- Si tiene humanoide, verificar que esté vivo. 
+    -- Para vehículos (BTR) u objetos (Minas) permitimos el paso si están en las carpetas correctas.
+    local hum = obj:FindFirstChildOfClass("Humanoid")
+    if hum and hum.Health <= 0 then return false end
     
-    -- Workspace folder checks
-    if model.Parent and (model.Parent.Name == "AIs" or model.Parent.Name == "AiZones") then return true end
+    local name = obj:GetAttribute("DisplayName") or obj:GetAttribute("CallSign") or obj.Name
+    if validNPCNames[name] or obj:GetAttribute("Preset") then return true end
+    
+    -- Verificación recursiva: ¿Está dentro de AiZones o AIs? (Soporta subcarpetas: Airdrop, ATC, etc.)
+    local aiZones = workspace:FindFirstChild("AiZones")
+    local ais = workspace:FindFirstChild("AIs")
+    if (aiZones and obj:IsDescendantOf(aiZones)) or (ais and obj:IsDescendantOf(ais)) then return true end
     return false
 end
 
@@ -54,12 +59,15 @@ local function getClosestNPCToMouse()
     local target = nil
     local part = nil
     local mousePos = UIS:GetMouseLocation()
+    Camera = workspace.CurrentCamera -- Actualizar referencia por si el juego la reinicia
 
     local function scan(obj)
         if not obj then return end
         for _, v in pairs(obj:GetChildren()) do
-            if v:IsA("Model") and isTargetableNPC(v) then
-                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart)
+            if (v:IsA("Model") or v:IsA("BasePart")) and isTargetableNPC(v) then
+                -- Prioridad de hitpart: 1. Configurada (Head), 2. PrimaryPart (BTR), 3. Cualquier parte (Mina)
+                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart) or (v:IsA("Model") and v.PrimaryPart) or v:FindFirstChildWhichIsA("BasePart")
+                
                 if hitPart then
                     local pos, visible = Camera:WorldToViewportPoint(hitPart.Position)
                     if visible then

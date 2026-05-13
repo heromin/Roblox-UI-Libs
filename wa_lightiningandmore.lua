@@ -8,7 +8,8 @@ local LightingMore = {
         T = Drawing.new("Line"), B = Drawing.new("Line"), 
         L = Drawing.new("Line"), R = Drawing.new("Line")
     },
-    CrosshairText = Drawing.new("Text")
+    CrosshairText = Drawing.new("Text"),
+    CrosshairDot = Drawing.new("Circle")
 }
 
 -- Configuración inicial Crosshair
@@ -18,6 +19,11 @@ for _, line in pairs(LightingMore.CrosshairLines) do
     line.Transparency = 1
     line.Color = Color3.new(1, 1, 1)
 end
+
+LightingMore.CrosshairDot.Visible = false
+LightingMore.CrosshairDot.Filled = true
+LightingMore.CrosshairDot.Transparency = 1
+LightingMore.CrosshairDot.Color = Color3.new(1, 1, 1)
 
 LightingMore.CrosshairText.Visible = false
 LightingMore.CrosshairText.Center = true
@@ -30,6 +36,7 @@ function LightingMore:UpdateCrosshair()
     if not enabled then 
         for _, l in pairs(self.CrosshairLines) do l.Visible = false end
         self.CrosshairText.Visible = false
+        self.CrosshairDot.Visible = false
         return 
     end
 
@@ -39,6 +46,10 @@ function LightingMore:UpdateCrosshair()
     local color = getgenv().CrosshairColor or Color3.new(1, 1, 1)
     local thickness = getgenv().CrosshairThickness or 1.5
     local rotation = getgenv().CrosshairRotation or 0
+
+    if getgenv().CrosshairRotating then
+        rotation = (tick() * (getgenv().CrosshairRotationSpeed or 2) * 50) % 360
+    end
 
     local function rotate(vec, deg)
         local rad = math.rad(deg)
@@ -68,6 +79,17 @@ function LightingMore:UpdateCrosshair()
         watermark.Position = center + Vector2.new(0, gap + size + 8)
     else
         watermark.Visible = false
+    end
+
+    -- Dot central
+    local dot = self.CrosshairDot
+    if getgenv().CrosshairDotEnabled then
+        dot.Visible = true
+        dot.Color = color
+        dot.Position = center
+        dot.Radius = getgenv().CrosshairDotSize or 2
+    else
+        dot.Visible = false
     end
 end
 
@@ -102,6 +124,10 @@ end
 
 function LightingMore:SetTime(val)
     Lighting.ClockTime = val
+end
+
+function LightingMore:SetFOV(val)
+    Camera.FieldOfView = val
 end
 
 function LightingMore:SetAtmosphereDensity(val)

@@ -171,10 +171,12 @@ TabWorld:AddSlider(Lighting_Section, "Clock Time", 0, 24, 12, function(val) Ligh
 TabWorld:AddSlider(Lighting_Section, "Fog/Atm. Density", 0, 1, 0.3, function(val) LightingMod:SetAtmosphereDensity(val) end)
 TabWorld:AddSlider(Lighting_Section, "Atmosphere Haze", 0, 10, 0, function(val) LightingMod:SetAtmosphereHaze(val) end)
 TabWorld:AddColorPicker(Lighting_Section, "Atmosphere Color", Color3.new(1,1,1), function(color) LightingMod:SetAtmosphereColor(color) end)
-TabWorld:AddCheckbox(Lighting_Section, "No Spawner Foliage", false, function(state) 
+TabWorld:AddCheckbox(Lighting_Section, "No Foliage", false, function(state) 
     getgenv().RemoveSpawnerFoliage = state
     LightingMod:SetSpawnerFoliage(state)
 end)
+TabWorld:AddCheckbox(Lighting_Section, "No Shadows", false, function(state) LightingMod:SetNoShadows(state) end)
+TabWorld:AddCheckbox(Lighting_Section, "Performance Mode", false, function(state) LightingMod:SetPerformanceMode(state) end)
 
 -- ==========================================
 -- [ TAB: MOVEMENT ]

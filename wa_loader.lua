@@ -84,6 +84,7 @@ TabESP:AddCheckbox(PlayerESP_Section, "Health Bar", false, function(state) getge
 TabESP:AddCheckbox(PlayerESP_Section, "Names", false, function(state) getgenv().ShowName = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Skeletons", false, function(state) getgenv().ShowSkeletons = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Tracers", false, function(state) getgenv().ShowTracer = state end)
+TabESP:AddDropdown(PlayerESP_Section, "Tracer Origin", {"Bottom", "Top", "Mouse"}, "Bottom", function(val) getgenv().TracerOrigin = val end)
 TabESP:AddColorPicker(PlayerESP_Section, "Tracer Color", Color3.new(1,1,1), function(color) getgenv().TracerColor = color end)
 TabESP:AddCheckbox(PlayerESP_Section, "Distance", false, function(state) getgenv().ShowDistance = state end)
 TabESP:AddSlider(PlayerESP_Section, "Max Distance", 100, 5000, 2000, function(val) getgenv().MaxDistance = val end)

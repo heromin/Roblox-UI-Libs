@@ -100,13 +100,20 @@ end)
 
 -- Función para Foliage en SpawnerZones
 function LightingMore:SetSpawnerFoliage(state)
-    local zones = workspace:FindFirstChild("SpawnerZones")
-    if not zones then return end
+    local zones = workspace:FindFirstChild("SpawnerZones") 
+    local foliage = zones and zones:FindFirstChild("Foliage")
+    if not foliage then return end
     
-    for _, obj in pairs(zones:GetDescendants()) do
+    for _, obj in pairs(foliage:GetDescendants()) do
         if obj:IsA("BasePart") then
             local mat = obj.Material
-            if mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass or obj.Name:lower():find("leaf") or obj.Name:lower():find("foliage") then
+            local name = obj.Name:lower()
+            local modelName = (obj.Parent and obj.Parent.Name:lower()) or ""
+            
+            -- Filtra por material o por nombres clave (bush, fern, tree, leaf)
+            if mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass or 
+               name:find("leaf") or name:find("foliage") or name:find("bush") or name:find("fern") or name:find("tree") or
+               modelName:find("bush") or modelName:find("fern") or modelName:find("tree") then
                 obj.Transparency = state and 1 or 0
             end
         end
@@ -149,11 +156,16 @@ end
 -- Observador para nuevos objetos en SpawnerZones
 task.spawn(function()
     local zones = workspace:WaitForChild("SpawnerZones", 10)
-    if zones then
-        zones.DescendantAdded:Connect(function(obj)
+    local foliage = zones and zones:WaitForChild("Foliage", 5)
+    local target = foliage or zones
+
+    if target then
+        target.DescendantAdded:Connect(function(obj)
             if getgenv().RemoveSpawnerFoliage and obj:IsA("BasePart") then
                 local mat = obj.Material
-                if mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass or obj.Name:lower():find("leaf") then
+                local name = obj.Name:lower()
+                local pName = obj.Parent.Name:lower()
+                if mat == Enum.Material.Grass or mat == Enum.Material.LeafyGrass or name:find("leaf") or name:find("bush") or name:find("fern") or name:find("tree") or pName:find("bush") or pName:find("fern") or pName:find("tree") then
                     obj.Transparency = 1
                 end
             end

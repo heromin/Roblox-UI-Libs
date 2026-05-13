@@ -96,23 +96,55 @@ end
 -- Bucle de actualización para el Crosshair
 RunService.RenderStepped:Connect(function()
     LightingMore:UpdateCrosshair()
+    
+    -- [ FORCE OVERRIDES ]
+    -- Usamos verificaciones 'if ~= then' para evitar re-asignaciones innecesarias que causan lag
 
-    -- Forzar el tiempo para evitar que el juego lo resetee
+    -- Fuerza de Tiempo (Evita que el juego lo resetee)
     if getgenv().OverrideTimeEnabled and getgenv().TargetTime then
-        Lighting.ClockTime = getgenv().TargetTime
+        if math.abs(Lighting.ClockTime - getgenv().TargetTime) > 0.001 then
+            Lighting.ClockTime = getgenv().TargetTime
+        end
     end
 
-    -- Forzar sombras desactivadas si la opción está activa
-    if getgenv().NoShadowsEnabled then Lighting.GlobalShadows = false end
+    -- Fuerza de Atmósfera
+    if getgenv().AtmosphereOverride then
+        local atm = Lighting:FindFirstChildOfClass("Atmosphere")
+        if atm then
+            if getgenv().TargetAtmDensity and math.abs(atm.Density - getgenv().TargetAtmDensity) > 0.001 then 
+                atm.Density = getgenv().TargetAtmDensity 
+            end
+            if getgenv().TargetAtmHaze and math.abs(atm.Haze - getgenv().TargetAtmHaze) > 0.001 then 
+                atm.Haze = getgenv().TargetAtmHaze 
+            end
+            if getgenv().TargetAtmColor and atm.Color ~= getgenv().TargetAtmColor then 
+                atm.Color = getgenv().TargetAtmColor 
+            end
+            if getgenv().TargetAtmDecay and atm.Decay ~= getgenv().TargetAtmDecay then 
+                atm.Decay = getgenv().TargetAtmDecay 
+            end
+            if getgenv().TargetAtmGlare and math.abs(atm.Glare - getgenv().TargetAtmGlare) > 0.001 then 
+                atm.Glare = getgenv().TargetAtmGlare 
+            end
+        end
+    end
+
+    -- Fuerza de Iluminación Global
+    if getgenv().BrightnessOverride and getgenv().TargetBrightness then
+        if math.abs(Lighting.Brightness - getgenv().TargetBrightness) > 0.001 then Lighting.Brightness = getgenv().TargetBrightness end
+    end
+    if getgenv().ExposureOverride and getgenv().TargetExposure then
+        if math.abs(Lighting.ExposureCompensation - getgenv().TargetExposure) > 0.001 then Lighting.ExposureCompensation = getgenv().TargetExposure end
+    end
+
+    -- Fuerza de Sombras
+    if getgenv().NoShadowsEnabled and Lighting.GlobalShadows ~= false then Lighting.GlobalShadows = false end
 end)
 
--- Función para Foliage en SpawnerZones
+-- Función para Foliage (Global e Instantánea)
 function LightingMore:SetSpawnerFoliage(state)
-    local zones = workspace:FindFirstChild("SpawnerZones") 
-    local foliage = zones and zones:FindFirstChild("Foliage")
-    if not foliage then return end
-    
-    for _, obj in pairs(foliage:GetDescendants()) do
+    -- Nota: Ahora busca en todo el mapa para máxima efectividad como en Inari
+    for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local mat = obj.Material
             local name = obj.Name:lower()
@@ -143,6 +175,32 @@ function LightingMore:SetTime(val)
     Lighting.ClockTime = val
 end
 
+function LightingMore:SetBrightness(val)
+    getgenv().TargetBrightness = val
+    getgenv().BrightnessOverride = true
+    Lighting.Brightness = val
+end
+
+function LightingMore:SetExposure(val)
+    getgenv().TargetExposure = val
+    getgenv().ExposureOverride = true
+    Lighting.ExposureCompensation = val
+end
+
+function LightingMore:SetStyle(style)
+    if style == "Realistic" then
+        self:SetBrightness(2)
+        Lighting.ShadowSoftness = 0.2
+        Lighting.EnvironmentDiffuseScale = 1
+        self:SetNoShadows(false)
+    elseif style == "Soft" then
+        self:SetBrightness(1)
+        Lighting.ShadowSoftness = 1
+        Lighting.EnvironmentDiffuseScale = 0.5
+        self:SetNoShadows(true)
+    end
+end
+
 function LightingMore:SetNoShadows(state)
     getgenv().NoShadowsEnabled = state
     Lighting.GlobalShadows = not state
@@ -170,29 +228,33 @@ function LightingMore:SetFOV(val)
 end
 
 function LightingMore:SetAtmosphereDensity(val)
-    getAtm().Density = val
+    getgenv().TargetAtmDensity = val
+    getgenv().AtmosphereOverride = true
 end
 
 function LightingMore:SetAtmosphereHaze(val)
-    getAtm().Haze = val
+    getgenv().TargetAtmHaze = val
+    getgenv().AtmosphereOverride = true
 end
 
 function LightingMore:SetAtmosphereColor(color)
-    getAtm().Color = color
+    getgenv().TargetAtmColor = color
+    getgenv().AtmosphereOverride = true
 end
 
 function LightingMore:SetAtmosphereDecay(color)
-    getAtm().Decay = color
+    getgenv().TargetAtmDecay = color
+    getgenv().AtmosphereOverride = true
 end
 
--- Observador para nuevos objetos en SpawnerZones
-task.spawn(function()
-    local zones = workspace:WaitForChild("SpawnerZones", 10)
-    local foliage = zones and zones:WaitForChild("Foliage", 5)
-    local target = foliage or zones
+function LightingMore:SetAtmosphereGlare(val)
+    getgenv().TargetAtmGlare = val
+    getgenv().AtmosphereOverride = true
+end
 
-    if target then
-        target.DescendantAdded:Connect(function(obj)
+task.spawn(function()
+    -- Observador para nuevos objetos en TODO el mapa
+    workspace.DescendantAdded:Connect(function(obj)
             if getgenv().RemoveSpawnerFoliage and obj:IsA("BasePart") then
                 local mat = obj.Material
                 local name = obj.Name:lower()

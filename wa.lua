@@ -108,36 +108,42 @@ function Library:Notify(title, text, duration)
 
     Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 4)
     local Stroke = Instance.new("UIStroke", Notification)
-    Stroke.Color = colors.tabActiveIndicator
-    Stroke.Thickness = 1.2
-    Stroke.Transparency = 0.4
+    Stroke.Color = colors.border
+    Stroke.Thickness = 1
+
+    local Liner = Instance.new("Frame", Notification)
+    Liner.Size = UDim2.new(1, 0, 0, 1)
+    Liner.Position = UDim2.new(0, 0, 1, -1)
+    Liner.BackgroundColor3 = colors.tabActiveIndicator
+    Liner.BorderSizePixel = 0
 
     local TitleLabel = Instance.new("TextLabel", Notification)
     TitleLabel.Size = UDim2.new(1, -20, 0, 20)
     TitleLabel.Position = UDim2.new(0, 10, 0, 5)
     TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Text = title:upper()
-    TitleLabel.TextColor3 = colors.tabActiveIndicator
+    TitleLabel.Text = "<b>" .. title:upper() .. "</b>"
+    TitleLabel.RichText = true
+    TitleLabel.TextColor3 = colors.text
     TitleLabel.Font = fonts.header
-    TitleLabel.TextSize = 13
+    TitleLabel.TextSize = 12
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
     local TextLabel = Instance.new("TextLabel", Notification)
-    TextLabel.Size = UDim2.new(1, -20, 1, -30)
-    TextLabel.Position = UDim2.new(0, 10, 0, 25)
+    TextLabel.Size = UDim2.new(1, -20, 0, 0)
+    TextLabel.Position = UDim2.new(0, 10, 0, 22)
     TextLabel.BackgroundTransparency = 1
     TextLabel.Text = text
-    TextLabel.TextColor3 = colors.text
-    TextLabel.Font = fonts.main
-    TextLabel.TextSize = 12
+    TextLabel.TextColor3 = colors.textDim
+    TextLabel.Font = fonts.header
+    TextLabel.TextSize = 11
     TextLabel.TextWrapped = true
     TextLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TextLabel.TextYAlignment = Enum.TextYAlignment.Top
+    TextLabel.AutomaticSize = Enum.AutomaticSize.Y
 
-    tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 60)}):Play()
+    tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 45)}):Play()
 
     task.delay(duration or 5, function()
-        local outTween = tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1})
+        local outTween = tweenService:Create(Notification, TweenInfo.new(0.4, Enum.EasingStyle.Quart), {Size = UDim2.new(1, 0, 0, 0)})
         outTween:Play()
         outTween.Completed:Connect(function()
             Notification:Destroy()

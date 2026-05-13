@@ -1,12 +1,14 @@
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 local Camera = workspace.CurrentCamera
 
 local LightingMore = {
     CrosshairLines = {
         T = Drawing.new("Line"), B = Drawing.new("Line"), 
         L = Drawing.new("Line"), R = Drawing.new("Line")
-    }
+    },
+    CrosshairText = Drawing.new("Text")
 }
 
 -- Configuración inicial Crosshair
@@ -17,29 +19,55 @@ for _, line in pairs(LightingMore.CrosshairLines) do
     line.Color = Color3.new(1, 1, 1)
 end
 
+LightingMore.CrosshairText.Visible = false
+LightingMore.CrosshairText.Center = true
+LightingMore.CrosshairText.Outline = true
+LightingMore.CrosshairText.Font = 2
+LightingMore.CrosshairText.Size = 13
+
 function LightingMore:UpdateCrosshair()
     local enabled = getgenv().CrosshairEnabled
     if not enabled then 
-        for _, l in pairs(self.CrosshairLines) do l.Visible = false end 
+        for _, l in pairs(self.CrosshairLines) do l.Visible = false end
+        self.CrosshairText.Visible = false
         return 
     end
 
-    local center = Camera.ViewportSize / 2
+    local center = (getgenv().CrosshairFollowMouse and UIS:GetMouseLocation()) or (Camera.ViewportSize / 2)
     local size = getgenv().CrosshairSize or 10
     local gap = getgenv().CrosshairGap or 5
     local color = getgenv().CrosshairColor or Color3.new(1, 1, 1)
     local thickness = getgenv().CrosshairThickness or 1.5
+    local rotation = getgenv().CrosshairRotation or 0
+
+    local function rotate(vec, deg)
+        local rad = math.rad(deg)
+        local cos, sin = math.cos(rad), math.sin(rad)
+        return Vector2.new(vec.X * cos - vec.Y * sin, vec.X * sin + vec.Y * cos)
+    end
 
     local lines = self.CrosshairLines
-    lines.T.From = center - Vector2.new(0, gap + size); lines.T.To = center - Vector2.new(0, gap)
-    lines.B.From = center + Vector2.new(0, gap); lines.B.To = center + Vector2.new(0, gap + size)
-    lines.L.From = center - Vector2.new(gap + size, 0); lines.L.To = center - Vector2.new(gap, 0)
-    lines.R.From = center + Vector2.new(gap, 0); lines.R.To = center + Vector2.new(gap + size, 0)
+    lines.T.From = center + rotate(Vector2.new(0, -gap - size), rotation); lines.T.To = center + rotate(Vector2.new(0, -gap), rotation)
+    lines.B.From = center + rotate(Vector2.new(0, gap), rotation); lines.B.To = center + rotate(Vector2.new(0, gap + size), rotation)
+    lines.L.From = center + rotate(Vector2.new(-gap - size, 0), rotation); lines.L.To = center + rotate(Vector2.new(-gap, 0), rotation)
+    lines.R.From = center + rotate(Vector2.new(gap, 0), rotation); lines.R.To = center + rotate(Vector2.new(gap + size, 0), rotation)
 
     for _, l in pairs(lines) do 
         l.Visible = true 
         l.Color = color
         l.Thickness = thickness
+    end
+
+    -- Watermark de la Crosshair
+    local watermark = self.CrosshairText
+    local textContent = getgenv().CrosshairWatermark or ""
+    if getgenv().CrosshairWatermarkEnabled and textContent ~= "" then
+        watermark.Visible = true
+        watermark.Text = textContent
+        watermark.Color = color
+        watermark.Position = center + Vector2.new(0, gap + size + 8)
+    else
+        watermark.Visible = false
     end
 end
 

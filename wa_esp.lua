@@ -6,6 +6,7 @@ local ESP = {
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 local localPlayer = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
@@ -13,6 +14,7 @@ local camera = workspace.CurrentCamera
 getgenv().ESP_Enabled = getgenv().ESP_Enabled or false
 getgenv().BoxType = getgenv().BoxType or "2D"
 getgenv().ShowTracer = getgenv().ShowTracer or false
+getgenv().TracerOrigin = getgenv().TracerOrigin or "Bottom"
 getgenv().ShowDistance = getgenv().ShowDistance or false
 getgenv().MaxDistance = getgenv().MaxDistance or 2000
 getgenv().TeamCheck = getgenv().TeamCheck or false
@@ -281,7 +283,16 @@ local function StartESP()
                         else for _, ld in ipairs(esp.skeletonlines) do ld[1].Visible = false end end
                         
                         if getgenv().ShowTracer then
-                            esp.tracer.Visible, esp.tracer.From, esp.tracer.To = true, Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y), Vector2.new(hrp2D.X, hrp2D.Y)
+                            local origin = getgenv().TracerOrigin or "Bottom"
+                            local startPos
+                            if origin == "Top" then
+                                startPos = Vector2.new(camera.ViewportSize.X / 2, 0)
+                            elseif origin == "Mouse" then
+                                startPos = UIS:GetMouseLocation()
+                            else -- Bottom por defecto
+                                startPos = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                            end
+                            esp.tracer.Visible, esp.tracer.From, esp.tracer.To = true, startPos, Vector2.new(hrp2D.X, hrp2D.Y)
                             esp.tracer.Color = getgenv().TracerColor or Color3.new(1,1,1)
                         else esp.tracer.Visible = false end
 

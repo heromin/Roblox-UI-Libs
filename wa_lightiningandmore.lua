@@ -264,7 +264,6 @@ task.spawn(function()
                 end
             end
         end)
-    end
 end)
 
 return LightingMore

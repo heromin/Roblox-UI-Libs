@@ -96,6 +96,14 @@ end
 -- Bucle de actualización para el Crosshair
 RunService.RenderStepped:Connect(function()
     LightingMore:UpdateCrosshair()
+
+    -- Forzar el tiempo para evitar que el juego lo resetee
+    if getgenv().OverrideTimeEnabled and getgenv().TargetTime then
+        Lighting.ClockTime = getgenv().TargetTime
+    end
+
+    -- Forzar sombras desactivadas si la opción está activa
+    if getgenv().NoShadowsEnabled then Lighting.GlobalShadows = false end
 end)
 
 -- Función para Foliage en SpawnerZones
@@ -130,7 +138,31 @@ local function getAtm()
 end
 
 function LightingMore:SetTime(val)
+    getgenv().TargetTime = val
+    getgenv().OverrideTimeEnabled = true
     Lighting.ClockTime = val
+end
+
+function LightingMore:SetNoShadows(state)
+    getgenv().NoShadowsEnabled = state
+    Lighting.GlobalShadows = not state
+end
+
+function LightingMore:SetPerformanceMode(state)
+    getgenv().PerformanceEnabled = state
+    
+    -- Desactivar efectos visuales costosos
+    local effects = {"BloomEffect", "BlurEffect", "SunRaysEffect", "ColorCorrectionEffect", "DepthOfFieldEffect"}
+    for _, v in pairs(Lighting:GetChildren()) do
+        if table.find(effects, v.ClassName) then
+            v.Enabled = not state
+        end
+    end
+
+    -- Optimización de terreno
+    if workspace:FindFirstChildOfClass("Terrain") then
+        workspace.Terrain.Decoration = not state
+    end
 end
 
 function LightingMore:SetFOV(val)

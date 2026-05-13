@@ -6,6 +6,8 @@ local CombatFuncs = loadstring(game:HttpGet("https://raw.githubusercontent.com/h
 local Inventory   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua"))()
 local esp         = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
 local NPCAimbot   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua"))()
+local GunMods     = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_gunmods.lua"))()
+local LightingMod = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_lightiningandmore.lua"))() -- Asumiendo carga local o remota
 
 -- [ SERVICES ] --
 local RunService = game:GetService("RunService")
@@ -36,7 +38,6 @@ TabCombat:AddCheckbox(Aimbot_Section, "Enable Aimbot", false, function(state) ge
 TabCombat:AddCheckbox(Aimbot_Section, "Silent Aim", false, function(state) getgenv().SilentAImUser = state end):AddKeybind(Enum.KeyCode.G)
 TabCombat:AddDropdown(Aimbot_Section, "Target Part", {"Head", "HumanoidRootPart", "UpperTorso"}, "Head", function(val) getgenv().AimbotTargetPart = val end)
 TabCombat:AddCheckbox(Aimbot_Section, "Fixed Lock-on", false, function(state) getgenv().AimbotLockTarget = state end)
-TabCombat:AddKeybind(Aimbot_Section, "Switch Target Key", Enum.KeyCode.X, function(key) getgenv().AimbotSwitchTargetKey = key end)
 TabCombat:AddSlider(Aimbot_Section, "Smoothness", 1, 20, 1, function(val) getgenv().AimbotSmoothness = val end)
 
 local Triggerbot_Section = TabCombat:AddSection("Triggerbot", "Right")
@@ -49,13 +50,20 @@ TabCombat:AddCheckbox(Checks_Section, "Wall Check", false, function(state) getge
 TabCombat:AddCheckbox(Checks_Section, "Show FOV", false, function(state) getgenv().drawFOV = state end)
 TabCombat:AddSlider(Checks_Section, "FOV Radius", 30, 500, 50, function(val) getgenv().fovRadius = val end)
 
+-- Gun Modifications
+local GunMods_Section = TabCombat:AddSection("Gun Mods", "Left")
+TabCombat:AddCheckbox(GunMods_Section, "No Recoil", false, function(state) GunMods:SetNoRecoil(state) end)
+TabCombat:AddCheckbox(GunMods_Section, "No Spread", false, function(state) GunMods:SetNoSpread(state) end)
+TabCombat:AddCheckbox(GunMods_Section, "No Drag", false, function(state) GunMods:SetNoDrag(state) end)
+TabCombat:AddCheckbox(GunMods_Section, "No Drop", false, function(state) GunMods:SetNoDrop(state) end)
+TabCombat:AddCheckbox(GunMods_Section, "Instant Aim", false, function(state) getgenv().instantzoom = state end)
+
 -- NPC Combat
 local NPCAimbot_Section = TabCombat:AddSection("NPC Combat", "Left")
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Aimbot", false, function(state) getgenv().NPCAimbotEnabled = state end):AddKeybind(Enum.KeyCode.H)
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Silent Aim", false, function(state) getgenv().NPCSilentAimEnabled = state end):AddKeybind(Enum.KeyCode.J)
 TabCombat:AddDropdown(NPCAimbot_Section, "NPC Target Part", {"Head", "HumanoidRootPart", "UpperTorso"}, "Head", function(val) getgenv().NPCTargetPart = val end)
-TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Fixed Lock-on", false, function(state) getgenv().NPCAimbotLockTarget = state end)
-TabCombat:AddKeybind(NPCAimbot_Section, "NPC Switch Target", Enum.KeyCode.X, function(key) getgenv().NPCAimbotSwitchTargetKey = key end)
+TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Fixed Lock-on", false, function(state) getgenv().NPCAimbotLockTarget = state end):AddKeybind(Enum.KeyCode.X)
 TabCombat:AddSlider(NPCAimbot_Section, "NPC Smoothness", 1, 20, 1, function(val) getgenv().NPCAimbotSmoothness = val end)
 TabCombat:AddCheckbox(NPCAimbot_Section, "NPC Wall Check", false, function(state) getgenv().NPCWallCheck = state end)
 
@@ -122,6 +130,40 @@ TabVisuals:AddColorPicker(HitFeedback_Section, "Log Color", Color3.fromRGB(255, 
 local Camera_Section = TabVisuals:AddSection("Camera", "Right")
 TabVisuals:AddSlider(Camera_Section, "Field of View", 70, 120, 90, function(val)
     workspace.CurrentCamera.FieldOfView = val
+end)
+TabVisuals:AddCheckbox(Camera_Section, "Enable Zoom", false, function(state)
+    if state then
+        getgenv().OldFOV = workspace.CurrentCamera.FieldOfView
+        LightingMod:SetFOV(getgenv().ZoomFOV or 30)
+    else
+        LightingMod:SetFOV(getgenv().OldFOV or 90)
+    end
+end):AddKeybind(Enum.KeyCode.Q)
+TabVisuals:AddSlider(Camera_Section, "Zoom Amount", 1, 60, 30, function(val) getgenv().ZoomFOV = val end)
+
+local Crosshair_Section = TabVisuals:AddSection("Custom Crosshair", "Right")
+TabVisuals:AddCheckbox(Crosshair_Section, "Enable Crosshair", false, function(state) getgenv().CrosshairEnabled = state end)
+TabVisuals:AddSlider(Crosshair_Section, "Size", 1, 50, 10, function(val) getgenv().CrosshairSize = val end)
+TabVisuals:AddSlider(Crosshair_Section, "Gap", 0, 20, 5, function(val) getgenv().CrosshairGap = val end)
+TabVisuals:AddSlider(Crosshair_Section, "Thickness", 1, 5, 2, function(val) getgenv().CrosshairThickness = val end)
+TabVisuals:AddSlider(Crosshair_Section, "Rotation", 0, 360, 0, function(val) getgenv().CrosshairRotation = val end)
+TabVisuals:AddCheckbox(Crosshair_Section, "Infinite Rotation", false, function(state) getgenv().CrosshairRotating = state end)
+TabVisuals:AddSlider(Crosshair_Section, "Rotation Speed", 1, 10, 2, function(val) getgenv().CrosshairRotationSpeed = val end)
+TabVisuals:AddColorPicker(Crosshair_Section, "Color", Color3.new(1,1,1), function(color) getgenv().CrosshairColor = color end)
+TabVisuals:AddCheckbox(Crosshair_Section, "Follow Mouse", false, function(state) getgenv().CrosshairFollowMouse = state end)
+TabVisuals:AddCheckbox(Crosshair_Section, "Center Dot", false, function(state) getgenv().CrosshairDotEnabled = state end)
+TabVisuals:AddSlider(Crosshair_Section, "Dot Size", 1, 10, 2, function(val) getgenv().CrosshairDotSize = val end)
+TabVisuals:AddCheckbox(Crosshair_Section, "Enable Watermark", false, function(state) getgenv().CrosshairWatermarkEnabled = state end)
+TabVisuals:AddTextbox(Crosshair_Section, "Watermark Text", "amber.lol", function(val) getgenv().CrosshairWatermark = val end)
+
+local Lighting_Section = TabVisuals:AddSection("Lighting & Environment", "Left")
+TabVisuals:AddSlider(Lighting_Section, "Clock Time", 0, 24, 12, function(val) LightingMod:SetTime(val) end)
+TabVisuals:AddSlider(Lighting_Section, "Fog/Atm. Density", 0, 1, 0.3, function(val) LightingMod:SetAtmosphereDensity(val) end)
+TabVisuals:AddSlider(Lighting_Section, "Atmosphere Haze", 0, 10, 0, function(val) LightingMod:SetAtmosphereHaze(val) end)
+TabVisuals:AddColorPicker(Lighting_Section, "Atmosphere Color", Color3.new(1,1,1), function(color) LightingMod:SetAtmosphereColor(color) end)
+TabVisuals:AddCheckbox(Lighting_Section, "No Spawner Foliage", false, function(state) 
+    getgenv().RemoveSpawnerFoliage = state
+    LightingMod:SetSpawnerFoliage(state)
 end)
 
 -- ==========================================

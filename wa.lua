@@ -106,7 +106,6 @@ function Library:Notify(title, text, duration)
     Notification.LayoutOrder = -os.time()
     Notification.Parent = self.NotifContainer
 
-    Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 4)
     local Stroke = Instance.new("UIStroke", Notification)
     Stroke.Color = colors.border
     Stroke.Thickness = 1
@@ -162,7 +161,6 @@ function Library:CreateKeybindList()
     Main.AutomaticSize = Enum.AutomaticSize.Y
     Main.Parent = self.ScreenGui
 
-    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 4)
     local Stroke = Instance.new("UIStroke", Main)
     Stroke.Color = colors.tabActiveIndicator
     Stroke.Thickness = 1.2
@@ -171,7 +169,6 @@ function Library:CreateKeybindList()
     Header.Size = UDim2.new(1, 0, 0, 25)
     Header.BackgroundColor3 = colors.secondary
     Header.BorderSizePixel = 0
-    Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 4)
     Header.Parent = Main
     
     local Title = Instance.new("TextLabel", Header)
@@ -222,7 +219,6 @@ function Library:Watermark(text)
     Main.AutomaticSize = Enum.AutomaticSize.X
     Main.Parent = self.ScreenGui
 
-    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 4)
     local Stroke = Instance.new("UIStroke", Main)
     Stroke.Color = colors.border
     Stroke.Thickness = 1
@@ -290,10 +286,6 @@ function Library:CreateWindow(title, subtitle)
     Main.Active = true
     Main.Parent = ScreenGui
     
-    local MainCorner = Instance.new("UICorner")
-    MainCorner.CornerRadius = UDim.new(0, 6)
-    MainCorner.Parent = Main
-
     -- Shadow Effect
     local Shadow = Instance.new("ImageLabel")
     Shadow.Name = "Shadow"
@@ -409,7 +401,6 @@ function Library:CreateWindow(title, subtitle)
     TabContainer.BorderSizePixel = 0
     TabContainer.Parent = Main
     
-    Instance.new("UICorner", TabContainer).CornerRadius = UDim.new(0, 4)
     local TabStroke = Instance.new("UIStroke", TabContainer)
     TabStroke.Color = colors.border
 
@@ -532,7 +523,6 @@ function Library:CreateWindow(title, subtitle)
             Section.AutomaticSize = Enum.AutomaticSize.Y
             Section.Parent = targetColumn
             
-            Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 4)
             local SecStroke = Instance.new("UIStroke", Section)
             SecStroke.Color = colors.border
 
@@ -581,7 +571,6 @@ function Library:CreateWindow(title, subtitle)
             CheckboxVisual.BackgroundColor3 = state and colors.tabActiveIndicator or colors.background
             CheckboxVisual.BorderSizePixel = 0
             CheckboxVisual.Parent = CheckboxBtn
-            Instance.new("UICorner", CheckboxVisual).CornerRadius = UDim.new(0, 3)
 
             local CheckStateIndicator = Instance.new("Frame")
             CheckStateIndicator.Name = "Indicator"
@@ -676,7 +665,6 @@ function Library:CreateWindow(title, subtitle)
             Button.TextSize = 14
             Button.Parent = section
             
-            Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
             local bStroke = Instance.new("UIStroke", Button)
             bStroke.Color = colors.border
 
@@ -706,7 +694,6 @@ function Library:CreateWindow(title, subtitle)
             KeybindBtn.TextSize = 14
             KeybindBtn.TextXAlignment = Enum.TextXAlignment.Left
             KeybindBtn.Parent = section
-            Instance.new("UICorner", KeybindBtn).CornerRadius = UDim.new(0, 4)
             local kbStroke = Instance.new("UIStroke", KeybindBtn)
             kbStroke.Color = colors.border
 
@@ -759,7 +746,6 @@ function Library:CreateWindow(title, subtitle)
             DropBtn.Font = fonts.main
             DropBtn.TextSize = 14
             DropBtn.Parent = section
-            Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 4)
             local dStroke = Instance.new("UIStroke", DropBtn)
             dStroke.Color = colors.border
 
@@ -870,14 +856,12 @@ function Library:CreateWindow(title, subtitle)
             Bar.BackgroundColor3 = colors.background
             Bar.BorderSizePixel = 0
             Bar.Parent = SliderFrame
-            Instance.new("UICorner", Bar)
 
             local Fill = Instance.new("Frame")
             Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
             Fill.BackgroundColor3 = colors.tabActiveIndicator
             Fill.BorderSizePixel = 0
             Fill.Parent = Bar
-            Instance.new("UICorner", Fill)
 
             local function update(input)
                 local pos = math.clamp((input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
@@ -925,7 +909,6 @@ function Library:CreateWindow(title, subtitle)
             InputFrame.BackgroundColor3 = colors.background
             InputFrame.BorderSizePixel = 0
             InputFrame.Parent = TextboxFrame
-            Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 4)
             local iStroke = Instance.new("UIStroke", InputFrame)
             iStroke.Color = colors.border
 
@@ -966,7 +949,6 @@ function Library:CreateWindow(title, subtitle)
             ColorPickerBtn.Font = fonts.main
             ColorPickerBtn.TextSize = 14
             ColorPickerBtn.Parent = section
-            Instance.new("UICorner", ColorPickerBtn).CornerRadius = UDim.new(0, 4)
             local cpStroke = Instance.new("UIStroke", ColorPickerBtn)
             cpStroke.Color = colors.border
 
@@ -977,7 +959,6 @@ function Library:CreateWindow(title, subtitle)
             ColorPreview.BackgroundColor3 = colorValue
             ColorPreview.BorderSizePixel = 0
             ColorPreview.Parent = ColorPickerBtn
-            Instance.new("UICorner", ColorPreview).CornerRadius = UDim.new(0, 3)
             Instance.new("UIStroke", ColorPreview).Color = colors.border
 
             local PickerFrame = Instance.new("Frame")
@@ -990,7 +971,6 @@ function Library:CreateWindow(title, subtitle)
             PickerFrame.Visible = false
             PickerFrame.ZIndex = 10
             PickerFrame.Parent = ScreenGui -- Parent to ScreenGui to be on top
-            Instance.new("UICorner", PickerFrame).CornerRadius = UDim.new(0, 6)
             Instance.new("UIStroke", PickerFrame).Color = colors.border
             
             -- Make the picker frame draggable
@@ -1039,7 +1019,6 @@ function Library:CreateWindow(title, subtitle)
             SV_Picker.BackgroundTransparency = 1
             SV_Picker.Active = true
             SV_Picker.Parent = PickerFrame
-            Instance.new("UICorner", SV_Picker).CornerRadius = UDim.new(0, 4)
 
             local SV_ValueOverlay = Instance.new("ImageLabel")
             SV_ValueOverlay.Name = "ValueOverlay"
@@ -1066,7 +1045,6 @@ function Library:CreateWindow(title, subtitle)
             HueBar.BackgroundTransparency = 1
             HueBar.Active = true
             HueBar.Parent = PickerFrame
-            Instance.new("UICorner", HueBar).CornerRadius = UDim.new(0, 4)
 
             local Hue_Cursor = Instance.new("Frame")
             Hue_Cursor.Name = "HueCursor"
@@ -1085,7 +1063,6 @@ function Library:CreateWindow(title, subtitle)
             AlphaBar.BorderSizePixel = 0
             AlphaBar.Active = true
             AlphaBar.Parent = PickerFrame
-            Instance.new("UICorner", AlphaBar).CornerRadius = UDim.new(0, 4)
             Instance.new("UIStroke", AlphaBar).Color = colors.border
 
             local AlphaCheckers = Instance.new("ImageLabel")

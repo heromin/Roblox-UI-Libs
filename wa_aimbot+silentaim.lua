@@ -17,11 +17,15 @@ getgenv().TriggerbotEnabled = getgenv().TriggerbotEnabled or false
 getgenv().TriggerbotDelay = getgenv().TriggerbotDelay or 0
 getgenv().drawFOV = getgenv().drawFOV or false
 getgenv().fovRadius = getgenv().fovRadius or 50
+getgenv().AimbotLockTarget = getgenv().AimbotLockTarget or false -- NEW: Fixed lock-on for players
+getgenv().AimbotSwitchTargetKey = getgenv().AimbotSwitchTargetKey or Enum.KeyCode.X -- NEW: Key to switch targets
 
 -- Internal Variables
 local isLocking = false
-local closestPlayer = nil
-local closestPlayerPart = nil
+local currentAimbotTarget = nil -- Stores the currently locked player target
+local currentAimbotTargetPart = nil -- Stores the currently locked player target part
+local lastTargetSwitchTime = 0
+local targetSwitchCooldown = 0.5 -- Cooldown to prevent rapid target switching
 
 -- Helper Functions
 local function isAlive(player)
@@ -102,11 +106,13 @@ RunService.RenderStepped:Connect(function(deltaTime)
 
     -- Update Target
     if getgenv().isAimbotEnabled or getgenv().SilentAImUser then
-        closestPlayer, closestPlayerPart = getClosestPlayerToMouse()
-        
+        if not getgenv().AimbotLockTarget or not isLocking then
+            -- If not fixed lock-on, or not currently locking, update target dynamically
+            currentAimbotTarget, currentAimbotTargetPart = getClosestPlayerToMouse()
+        end
         -- Aimbot (Camera Lock)
-        if isLocking and getgenv().isAimbotEnabled and closestPlayerPart then
-            local targetCFrame = CFrame.new(Camera.CFrame.Position, closestPlayerPart.Position)
+        if isLocking and getgenv().isAimbotEnabled and currentAimbotTarget and currentAimbotTarget.Parent and currentAimbotTargetPart and currentAimbotTargetPart.Parent then
+            local targetCFrame = CFrame.new(Camera.CFrame.Position, currentAimbotTargetPart.Position)
             local smoothness = getgenv().AimbotSmoothness or 1
             
             if smoothness > 1 then
@@ -115,6 +121,9 @@ RunService.RenderStepped:Connect(function(deltaTime)
                 Camera.CFrame = targetCFrame
             end
         end
+    else
+        currentAimbotTarget = nil -- Clear target when aimbot is disabled
+        currentAimbotTargetPart = nil
     end
 end)
 
@@ -124,10 +133,17 @@ pcall(function()
     BulletModule = require(game:GetService("ReplicatedStorage").Modules.FPS.Bullet)
 end)
 
-if BulletModule and BulletModule.CreateBullet then
+if BulletModule and BulletModule.CreateBullet and hookfunction and (newcclosure or LPH_JIT_MAX) then
+    print("[COMBAT] SILENT AIM SUPPORTED")
     local OldBullet; OldBullet = hookfunction(BulletModule.CreateBullet, newcclosure(function(...)
         local Args          = {...};
-        local Target, Part  = getClosestPlayerToMouse();
+        local Target, Part  = nil, nil
+        if getgenv().AimbotLockTarget and currentAimbotTarget then
+            Target = currentAimbotTarget
+            Part = currentAimbotTargetPart
+        else
+            Target, Part = getClosestPlayerToMouse();
+        end
         
         if not checkcaller() and Args[5] and typeof(Args[5]) == "Instance" then
             local Success, ShotCFrame = pcall(function() return Args[5].CFrame end)
@@ -188,11 +204,6 @@ getgenv().UnloadCombat = function()
 end
 
 -- Expanded Anti-Cheat Bypass & Security
-if not hookfunction or not newcclosure then 
-    LocalPlayer:kick("Executor Not Supported");
-    return
-end;
-
 local function SecureBypass()
     local mt = getrawmetatable(game)
     local old_idx = mt.__index
@@ -248,24 +259,26 @@ local function BypassAC(Char)
 end
 
 -- Initialize Security
-task.spawn(function()
-    print("[COMBAT] Initializing Security Bypasses...")
-    pcall(SecureBypass)
-    if LocalPlayer.Character then
-        pcall(BypassAC, LocalPlayer.Character)
-    end
-    LocalPlayer.CharacterAdded:Connect(function(char)
-        pcall(BypassAC, char)
+if hookfunction and newcclosure then
+    task.spawn(function()
+        print("[COMBAT] Initializing Security Bypasses...")
+        pcall(SecureBypass)
+        if LocalPlayer.Character then
+            pcall(BypassAC, LocalPlayer.Character)
+        end
+        LocalPlayer.CharacterAdded:Connect(function(char)
+            pcall(BypassAC, char)
+        end)
+        
+        -- Hook Kick
+        local old_kick; old_kick = hookfunction(game.Players.LocalPlayer.Kick, newcclosure(function(self, ...)
+            if not checkcaller() then return end
+            return old_kick(self, ...)
+        end))
+        
+        print("[COMBAT] Security Bypasses Ready.")
     end)
-    
-    -- Hook Kick
-    local old_kick; old_kick = hookfunction(game.Players.LocalPlayer.Kick, newcclosure(function(self, ...)
-        if not checkcaller() then return end
-        return old_kick(self, ...)
-    end))
-    
-    print("[COMBAT] Security Bypasses Ready.")
-end)
+end
 
 -- Triggerbot Implementation
 task.spawn(function()
@@ -298,6 +311,6 @@ task.spawn(function()
 end)
 
 return {
-    GetTarget = function() return closestPlayer, closestPlayerPart end,
+    GetTarget = function() return currentAimbotTarget, currentAimbotTargetPart end,
     Settings = getgenv()
 }

@@ -168,14 +168,19 @@ TabWorld:AddTextbox(Crosshair_Section, "Watermark Text", "amber.lol", function(v
 
 local Lighting_Section = TabWorld:AddSection("Lighting & Environment", "Left")
 TabWorld:AddSlider(Lighting_Section, "Clock Time", 0, 24, 12, function(val) LightingMod:SetTime(val) end)
+TabWorld:AddSlider(Lighting_Section, "Brightness", 0, 10, 1, function(val) LightingMod:SetBrightness(val) end)
+TabWorld:AddSlider(Lighting_Section, "Exposure", -5, 5, 0, function(val) LightingMod:SetExposure(val) end)
+TabWorld:AddDropdown(Lighting_Section, "Lighting Style", {"Realistic", "Soft", "Default"}, "Default", function(val) LightingMod:SetStyle(val) end)
 TabWorld:AddSlider(Lighting_Section, "Fog/Atm. Density", 0, 1, 0.3, function(val) LightingMod:SetAtmosphereDensity(val) end)
 TabWorld:AddSlider(Lighting_Section, "Atmosphere Haze", 0, 10, 0, function(val) LightingMod:SetAtmosphereHaze(val) end)
+TabWorld:AddSlider(Lighting_Section, "Atmosphere Glare", 0, 10, 0, function(val) LightingMod:SetAtmosphereGlare(val) end)
 TabWorld:AddColorPicker(Lighting_Section, "Atmosphere Color", Color3.new(1,1,1), function(color) LightingMod:SetAtmosphereColor(color) end)
-TabWorld:AddCheckbox(Lighting_Section, "No Foliage", false, function(state) 
+TabWorld:AddCheckbox(Lighting_Section, "No Foliage (Global)", false, function(state) 
     getgenv().RemoveSpawnerFoliage = state
     LightingMod:SetSpawnerFoliage(state)
 end)
 TabWorld:AddCheckbox(Lighting_Section, "No Shadows", false, function(state) LightingMod:SetNoShadows(state) end)
+TabWorld:AddCheckbox(Lighting_Section, "Remove Grass", false, function(state) workspace.Terrain.Decoration = not state end)
 TabWorld:AddCheckbox(Lighting_Section, "Performance Mode", false, function(state) LightingMod:SetPerformanceMode(state) end)
 
 -- ==========================================

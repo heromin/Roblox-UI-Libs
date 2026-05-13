@@ -13,6 +13,8 @@ getgenv().NPCAimbotSmoothness = getgenv().NPCAimbotSmoothness or 1
 getgenv().NPCWallCheck = getgenv().NPCWallCheck or false
 getgenv().NPCFOVRadius = getgenv().NPCFOVRadius or 100
 getgenv().NPCShowFOV = getgenv().NPCShowFOV or false
+getgenv().NPCAimbotLockTarget = getgenv().NPCAimbotLockTarget or false -- NEW: Fixed lock-on for NPCs
+getgenv().NPCAimbotSwitchTargetKey = getgenv().NPCAimbotSwitchTargetKey or Enum.KeyCode.X
 
 -- Identify valid NPCs (Logic synced with wa_esp.lua)
 local validNPCNames = {}
@@ -25,21 +27,22 @@ local function CacheNPCs()
 end
 task.spawn(CacheNPCs)
 
-local function isTargetableNPC(obj)
-    if not obj or (not obj:IsA("Model") and not obj:IsA("BasePart")) then return false end
+local function isTargetableNPC(model)
+    if not model or not model:IsA("Model") then return false end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    if not (hum and hum.Health > 0) then return false end
     
-    -- Si tiene humanoide, verificar que esté vivo. 
-    -- Para vehículos (BTR) u objetos (Minas) permitimos el paso si están en las carpetas correctas.
-    local hum = obj:FindFirstChildOfClass("Humanoid")
-    if hum and hum.Health <= 0 then return false end
+    local name = model:GetAttribute("DisplayName") or model:GetAttribute("CallSign") or model.Name
+    if validNPCNames[name] or model:GetAttribute("Preset") then return true end
     
-    local name = obj:GetAttribute("DisplayName") or obj:GetAttribute("CallSign") or obj.Name
-    if validNPCNames[name] or obj:GetAttribute("Preset") then return true end
-    
-    -- Verificación recursiva: ¿Está dentro de AiZones o AIs? (Soporta subcarpetas: Airdrop, ATC, etc.)
-    local aiZones = workspace:FindFirstChild("AiZones")
-    local ais = workspace:FindFirstChild("AIs")
-    if (aiZones and obj:IsDescendantOf(aiZones)) or (ais and obj:IsDescendantOf(ais)) then return true end
+    -- Comprobación de carpetas (Ampliada para mayor compatibilidad)
+    local validFolders = {"AIs", "AiZones", "NPCs", "Zombies", "Mobs", "Entities", "Living"}
+    for _, folderName in ipairs(validFolders) do
+        local folder = workspace:FindFirstChild(folderName)
+        if folder and model:IsDescendantOf(folder) then
+            return true
+        end
+    end
     return false
 end
 
@@ -54,20 +57,47 @@ local function checkVisibility(targetPart, targetCharacter)
     return result == nil
 end
 
+local currentNPCTarget = nil -- Stores the currently locked NPC target
+local currentNPCTargetPart = nil -- Stores the currently locked NPC target part
+
+local function getAllValidNPCs()
+    local validNPCs = {}
+    local function scan(obj)
+        if not obj then return end
+        for _, v in pairs(obj:GetChildren()) do
+            if v:IsA("Model") and isTargetableNPC(v) then
+                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart) or v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+                if hitPart then
+                    local pos, visible = Camera:WorldToViewportPoint(hitPart.Position)
+                    if visible then
+                        if not getgenv().NPCWallCheck or checkVisibility(hitPart, v) then
+                            table.insert(validNPCs, {NPC = v, Part = hitPart})
+                        end
+                    end
+                end
+            elseif v:IsA("Folder") then scan(v) end
+        end
+    end
+
+    local targetFolders = {"AIs", "AiZones", "NPCs", "Zombies", "Mobs", "Entities", "Living"}
+    for _, folderName in ipairs(targetFolders) do
+        local f = workspace:FindFirstChild(folderName)
+        if f then scan(f) end
+    end
+    return validNPCs
+end
+
 local function getClosestNPCToMouse()
     local shortestDistance = math.huge
     local target = nil
     local part = nil
     local mousePos = UIS:GetMouseLocation()
-    Camera = workspace.CurrentCamera -- Actualizar referencia por si el juego la reinicia
 
     local function scan(obj)
         if not obj then return end
         for _, v in pairs(obj:GetChildren()) do
-            if (v:IsA("Model") or v:IsA("BasePart")) and isTargetableNPC(v) then
-                -- Prioridad de hitpart: 1. Configurada (Head), 2. PrimaryPart (BTR), 3. Cualquier parte (Mina)
-                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart) or (v:IsA("Model") and v.PrimaryPart) or v:FindFirstChildWhichIsA("BasePart")
-                
+            if v:IsA("Model") and isTargetableNPC(v) then
+                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart)
                 if hitPart then
                     local pos, visible = Camera:WorldToViewportPoint(hitPart.Position)
                     if visible then
@@ -84,9 +114,43 @@ local function getClosestNPCToMouse()
         end
     end
 
-    scan(workspace:FindFirstChild("AIs"))
-    scan(workspace:FindFirstChild("AiZones"))
+    -- If fixed lock-on is enabled and we already have a target, stick to it.
+    if getgenv().NPCAimbotLockTarget and currentNPCTarget and currentNPCTarget.Parent and currentNPCTargetPart and currentNPCTargetPart.Parent then
+        -- Re-validate current target
+        if isTargetableNPC(currentNPCTarget) and (not getgenv().NPCWallCheck or checkVisibility(currentNPCTargetPart, currentNPCTarget)) then
+            return currentNPCTarget, currentNPCTargetPart
+        else
+            -- Current target is no longer valid, clear it.
+            currentNPCTarget = nil
+            currentNPCTargetPart = nil
+        end
+    end
+
+    -- Escanear múltiples carpetas comunes
+    local targetFolders = {"AIs", "AiZones", "NPCs", "Zombies", "Mobs", "Entities", "Living"}
+    for _, folderName in ipairs(targetFolders) do
+        scan(workspace:FindFirstChild(folderName))
+    end
     return target, part
+end
+ 
+local lastNPCSwitchTime = 0
+local function cycleNPCTarget()
+    if not getgenv().NPCAimbotLockTarget or not isLocking or (tick() - lastNPCSwitchTime < 0.5) then return end
+    local validNPCs = getAllValidNPCs()
+    if #validNPCs == 0 then return end
+
+    local currentIndex = -1
+    if currentNPCTarget then
+        for i, data in pairs(validNPCs) do
+            if data.NPC == currentNPCTarget then currentIndex = i break end
+        end
+    end
+
+    local nextIndex = (currentIndex % #validNPCs) + 1
+    currentNPCTarget = validNPCs[nextIndex].NPC
+    currentNPCTargetPart = validNPCs[nextIndex].Part
+    lastNPCSwitchTime = tick()
 end
 
 -- FOV Circle logic (NPC Specific)
@@ -99,10 +163,23 @@ fovCircle.Filled = false
 fovCircle.Transparency = 0.8
 
 local isLocking = false
-UIS.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton2 then isLocking = true end end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton2 then isLocking = false end end)
+UIS.InputBegan:Connect(function(i) 
+    if i.UserInputType == Enum.UserInputType.MouseButton2 then 
+        isLocking = true 
+    elseif i.KeyCode == getgenv().NPCAimbotSwitchTargetKey then
+        cycleNPCTarget()
+    end 
+end)
+UIS.InputEnded:Connect(function(i) 
+    if i.UserInputType == Enum.UserInputType.MouseButton2 then 
+        isLocking = false 
+        currentNPCTarget = nil
+        currentNPCTargetPart = nil
+    end 
+end)
 
 RunService.RenderStepped:Connect(function(deltaTime)
+    Camera = workspace.CurrentCamera -- Actualizar referencia por si el juego la cambia
     fovCircle.Position = UIS:GetMouseLocation()
     fovCircle.Radius = getgenv().NPCFOVRadius
     fovCircle.Visible = getgenv().NPCShowFOV

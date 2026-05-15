@@ -4280,3 +4280,4 @@ Maid.DisconnectAll = function()
         Val:Disconnect()
     end
 end
+return Library

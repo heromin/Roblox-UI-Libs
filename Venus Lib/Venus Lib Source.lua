@@ -2952,6 +2952,8 @@ function library:Load(options)
 
         table.insert(self.tabs, tab)
 
+        local tabtypes = utility.table({Render = {tab}}, true)
+
         task.spawn(function()
             task.wait()
             tab.Visible = tab.Visible
@@ -2963,6 +2965,8 @@ function library:Load(options)
             Size = UDim2.new(0.5, -4, 1, 0)
         })
 
+        table.insert(tabtypes.Render, column1)
+
         column1:AddListLayout(12)
         column1:MakeScrollable()
 
@@ -2972,6 +2976,8 @@ function library:Load(options)
             Size = UDim2.new(0.5, -4, 1, 0),
             Position = UDim2.new(0.5, 4, 0, 0)
         })
+
+        table.insert(tabtypes.Render, column2)
 
         column2:AddListLayout(12)
         column2:MakeScrollable()
@@ -3018,14 +3024,12 @@ function library:Load(options)
             --utility.changeobjecttheme(outline, "Tab Border")
         end)
 
-        local tabtypes = utility.table({}, true)
-
         function tabtypes:Section(options)
             utility.table(options)
             local name = options.name
             local side = options.side and options.side:lower() or "left"
 
-            local column = side == "left" and column1 or column2
+            local column = (side == "left" or side == "1") and column1 or column2
 
             local section = utility.create("Square", {
                 Filled = true,
@@ -3035,6 +3039,8 @@ function library:Load(options)
                 Theme = "Section Background",
                 ZIndex = 6
             })
+
+            table.insert(tabtypes.Render, section)
 
             utility.outline(section, "Section Border")
             

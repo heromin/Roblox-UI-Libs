@@ -77,7 +77,9 @@ local Utility = {}
 --
 getgenv().Library = Library
 getgenv().Utility = Utility
-syn.protect_gui(InputGUI)
+if syn and syn.protect_gui then
+    syn.protect_gui(InputGUI)
+end
 -----------------------------------------------------------------
 do
     Utility.AddInstance = function(NewInstance, Properties)

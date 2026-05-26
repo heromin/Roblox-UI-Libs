@@ -92,45 +92,39 @@ local function getClosestNPCToMouse()
     local target = nil
     local part = nil
     local mousePos = UIS:GetMouseLocation()
+    local fov = getgenv().NPCShowFOV and getgenv().NPCFOVRadius or 1000
 
-    local function scan(obj)
-        if not obj then return end
-        for _, v in pairs(obj:GetChildren()) do
-            if v:IsA("Model") and isTargetableNPC(v) then
-                local hitPart = v:FindFirstChild(getgenv().NPCTargetPart)
-                if hitPart then
-                    local pos, visible = Camera:WorldToViewportPoint(hitPart.Position)
-                    if visible then
-                        if getgenv().NPCWallCheck and not checkVisibility(hitPart, v) then continue end
-                        local dist = (mousePos - Vector2.new(pos.X, pos.Y)).Magnitude
-                        if dist < shortestDistance and dist <= (getgenv().NPCShowFOV and getgenv().NPCFOVRadius or math.huge) then
-                            shortestDistance = dist
-                            target = v
-                            part = hitPart
-                        end
-                    end
-                end
-            elseif v:IsA("Folder") then scan(v) end
-        end
-    end
-
-    -- If fixed lock-on is enabled and we already have a target, stick to it.
+    -- Re-validación de objetivo actual para Lock-on
     if getgenv().NPCAimbotLockTarget and currentNPCTarget and currentNPCTarget.Parent and currentNPCTargetPart and currentNPCTargetPart.Parent then
-        -- Re-validate current target
         if isTargetableNPC(currentNPCTarget) and (not getgenv().NPCWallCheck or checkVisibility(currentNPCTargetPart, currentNPCTarget)) then
-            return currentNPCTarget, currentNPCTargetPart
-        else
-            -- Current target is no longer valid, clear it.
-            currentNPCTarget = nil
-            currentNPCTargetPart = nil
+            local pos, visible = Camera:WorldToViewportPoint(currentNPCTargetPart.Position)
+            if visible and (mousePos - Vector2.new(pos.X, pos.Y)).Magnitude <= fov then
+                return currentNPCTarget, currentNPCTargetPart
+            end
+        end
+        currentNPCTarget = nil
+        currentNPCTargetPart = nil
+    end
+
+    -- Escaneo optimizado utilizando la función ya existente
+    local validNPCs = getAllValidNPCs()
+    for _, data in ipairs(validNPCs) do
+        local pos, visible = Camera:WorldToViewportPoint(data.Part.Position)
+        if visible then
+            local dist = (mousePos - Vector2.new(pos.X, pos.Y)).Magnitude
+            if dist < shortestDistance and dist <= fov then
+                shortestDistance = dist
+                target = data.NPC
+                part = data.Part
+            end
         end
     end
 
-    -- Escanear múltiples carpetas comunes
-    local targetFolders = {"AIs", "AiZones", "NPCs", "Zombies", "Mobs", "Entities", "Living"}
-    for _, folderName in ipairs(targetFolders) do
-        scan(workspace:FindFirstChild(folderName))
+    if getgenv().NPCAimbotLockTarget then
+        currentNPCTarget = target
+        currentNPCTargetPart = part
     end
+    
     return target, part
 end
  

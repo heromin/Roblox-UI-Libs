@@ -23,6 +23,7 @@ getgenv().ShowName = getgenv().ShowName or false
 getgenv().ShowHealth = getgenv().ShowHealth or false
 getgenv().ShowSkeletons = getgenv().ShowSkeletons or false
 getgenv().TracerColor = getgenv().TracerColor or Color3.new(1, 1, 1)
+getgenv().ShowGunESP = getgenv().ShowGunESP or false
 getgenv().BoxColor = getgenv().BoxColor or Color3.new(1, 1, 1)
 
 -- Nuevas variables para World ESP y Loot
@@ -166,7 +167,8 @@ local function StartESP()
             distance = create("Text", {Color = Color3.new(1, 1, 1), Size = 12, Outline = true, Center = true}),
             boxLines = {},
             skeletonlines = {},
-            loot = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false})
+            loot = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false}),
+            gun = create("Text", {Color = Color3.new(1, 1, 1), Outline = true, Center = true, Size = 13, Visible = false})
         }
     end
 
@@ -311,6 +313,24 @@ local function StartESP()
                             esp.loot.Position = Vector2.new(hrp2D.X, hrp2D.Y + 45)
                             esp.loot.Visible = true
                         else esp.loot.Visible = false end
+
+                        if getgenv().ShowGunESP then
+                            local toolName = "None"
+                            local rsPlayers = game:GetService("ReplicatedStorage"):FindFirstChild("Players")
+                            local playerRS = rsPlayers and rsPlayers:FindFirstChild(player.Name)
+                            local gVariables = playerRS and playerRS:FindFirstChild("Status") and playerRS.Status:FindFirstChild("GameplayVariables")
+                            
+                            if gVariables then
+                                local equippedVal = gVariables:FindFirstChild("EquippedTool")
+                                if equippedVal and equippedVal:IsA("ObjectValue") and equippedVal.Value then 
+                                    toolName = equippedVal.Value.Name 
+                                end
+                            end
+                            esp.gun.Text = "[" .. toolName:upper() .. "]"
+                            esp.gun.Color = getgenv().AccentColor or Color3.fromRGB(230, 40, 90)
+                            esp.gun.Position = Vector2.new(boxSize.X / 2 + boxPos.X, boxPos.Y + boxSize.Y + (getgenv().ShowDistance and 20 or 5))
+                            esp.gun.Visible = true
+                        else esp.gun.Visible = false end
                     else hideEsp(esp) end
                 else hideEsp(esp) end
             else hideEsp(esp) end

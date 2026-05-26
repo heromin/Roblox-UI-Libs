@@ -1,0 +1,42 @@
+-- Advanced Resolver Module for Project Delta
+local Resolver = {
+    Cache = {}
+}
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Global setting
+getgenv().ResolverEnabled = getgenv().ResolverEnabled or false
+
+function Resolver:Run()
+    if not getgenv().ResolverEnabled then return end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            local rsPlayer = ReplicatedStorage:FindFirstChild("Players") and ReplicatedStorage.Players:FindFirstChild(player.Name)
+            local verifiedPos = rsPlayer and rsPlayer:FindFirstChild("Status") and rsPlayer.Status:FindFirstChild("UAC") and rsPlayer.Status.UAC:GetAttribute("LastVerifiedPos")
+            
+            if verifiedPos then
+                local distance = (hrp.Position - verifiedPos).Magnitude
+                self.Cache[player.Name] = self.Cache[player.Name] or 0
+                
+                if distance >= 10 then
+                    self.Cache[player.Name] = self.Cache[player.Name] + 1
+                    -- Si hay demasiada discrepancia, forzamos la posición verificada por el servidor
+                    if self.Cache[player.Name] >= 250 then
+                        hrp.CFrame = CFrame.new(verifiedPos)
+                    end
+                elseif self.Cache[player.Name] > 0 then
+                    self.Cache[player.Name] = self.Cache[player.Name] - 1
+                end
+            end
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(function() Resolver:Run() end)
+return Resolver

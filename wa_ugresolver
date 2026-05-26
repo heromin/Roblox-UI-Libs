@@ -1,0 +1,23 @@
+-- UnderGround Resolver (Self)
+local UGResolver = {}
+local LocalPlayer = game:GetService("Players").LocalPlayer
+
+getgenv().UGResolverActive = getgenv().UGResolverActive or false
+
+function UGResolver:Execute()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    
+    if hrp and not getgenv().UGResolverCooldown then
+        getgenv().UGResolverCooldown = true
+        local originalCFrame = hrp.CFrame
+        
+        -- Teleport bajo el mapa 0.1s para resetear estado
+        hrp.CFrame = originalCFrame * CFrame.new(0, -30, 0)
+        task.wait(0.12)
+        hrp.CFrame = originalCFrame
+        getgenv().UGResolverCooldown = false
+    end
+end
+
+return UGResolver

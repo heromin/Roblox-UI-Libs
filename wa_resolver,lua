@@ -14,20 +14,28 @@ getgenv().ResolverEnabled = getgenv().ResolverEnabled or false
 function Resolver:Run()
     if not getgenv().ResolverEnabled then return end
     
+    local rsPlayers = ReplicatedStorage:FindFirstChild("Players")
+    if not rsPlayers then return end
+    
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = player.Character.HumanoidRootPart
-            local rsPlayer = ReplicatedStorage:FindFirstChild("Players") and ReplicatedStorage.Players:FindFirstChild(player.Name)
-            local verifiedPos = rsPlayer and rsPlayer:FindFirstChild("Status") and rsPlayer.Status:FindFirstChild("UAC") and rsPlayer.Status.UAC:GetAttribute("LastVerifiedPos")
+        if player ~= LocalPlayer and player.Character then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            
+            if not (hrp and hum and hum.Health > 0) then continue end
+
+            local rsEntry = rsPlayers:FindFirstChild(player.Name)
+            local verifiedPos = rsEntry and rsEntry:FindFirstChild("Status") and rsEntry.Status:FindFirstChild("UAC") and rsEntry.Status.UAC:GetAttribute("LastVerifiedPos")
             
             if verifiedPos then
                 local distance = (hrp.Position - verifiedPos).Magnitude
                 self.Cache[player.Name] = self.Cache[player.Name] or 0
                 
-                if distance >= 10 then
-                    self.Cache[player.Name] = self.Cache[player.Name] + 1
-                    -- Si hay demasiada discrepancia, forzamos la posición verificada por el servidor
-                    if self.Cache[player.Name] >= 250 then
+                -- Si la distancia es mayor a 10 studs o el jugador se mueve sin velocidad reportada
+                if distance >= 10 or (distance > 2 and hrp.AssemblyLinearVelocity.Magnitude < 1) then
+                    self.Cache[player.Name] = self.Cache[player.Name] + 2
+                    
+                    if self.Cache[player.Name] >= 100 then -- Reducido de 250 para mayor reactividad
                         hrp.CFrame = CFrame.new(verifiedPos)
                     end
                 elseif self.Cache[player.Name] > 0 then

@@ -199,11 +199,19 @@ local function StartESP()
         for player, esp in pairs(ESP.Cache) do
             local character = player.Character
             if character and (not getgenv().TeamCheck or (player.Team ~= localPlayer.Team)) then
-                local rootPart = character:FindFirstChild("HumanoidRootPart")
-                local head = character:FindFirstChild("Head")
-                local humanoid = character:FindFirstChild("Humanoid")
+                -- Cache local de referencias para optimizar el loop
+                esp.CharCache = esp.CharCache or {}
+                local rootPart = esp.CharCache.Root or character:FindFirstChild("HumanoidRootPart")
+                local head = esp.CharCache.Head or character:FindFirstChild("Head")
+                local humanoid = esp.CharCache.Hum or character:FindFirstChildOfClass("Humanoid")
                 
-                local isBehindWall = getgenv().WallCheck and (function()
+                if rootPart then esp.CharCache.Root = rootPart end
+                if head then esp.CharCache.Head = head end
+                if humanoid then esp.CharCache.Hum = humanoid end
+                
+                if not (rootPart and head and humanoid) then hideEsp(esp) continue end
+
+                local isBehindWall = getgenv().WallCheck and humanoid.Health > 0 and (function()
                     local origin = camera.CFrame.Position
                     local direction = (rootPart.Position - origin)
                     local rayParams = RaycastParams.new()

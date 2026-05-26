@@ -1,5 +1,6 @@
 local ESP = {
     Cache = {},
+    WorldCache = {},
     Connections = {},
     Enabled = false
 }
@@ -175,25 +176,33 @@ local function StartESP()
     local function removeEsp(player)
         local esp = ESP.Cache[player]
         if not esp then return end
-        for _, drawing in pairs(esp) do
+        for k, drawing in pairs(esp) do
+            if k == "CharCache" then continue end -- Evitar error al intentar borrar la tabla de cache
             if type(drawing) == "table" then
                 for _, sub in pairs(drawing) do
-                    if type(sub) == "table" and sub[1] and sub[1].Remove then sub[1]:Remove()
-                    elseif type(sub) ~= "table" and sub.Remove then sub:Remove() end
+                    pcall(function()
+                        if type(sub) == "table" and sub[1] then sub[1]:Remove() else sub:Remove() end
+                    end)
                 end
-            elseif drawing.Remove then drawing:Remove() end
+            else
+                pcall(function() drawing:Remove() end)
+            end
         end
         ESP.Cache[player] = nil
     end
 
     local function hideEsp(esp)
-        for _, drawing in pairs(esp) do
+        for k, drawing in pairs(esp) do
+            if k == "CharCache" then continue end
             if type(drawing) == "table" then
                 for _, sub in pairs(drawing) do
-                    if type(sub) == "table" and sub[1] and sub[1].Remove then sub[1].Visible = false
-                    elseif type(sub) ~= "table" and sub.Remove then sub.Visible = false end
+                    pcall(function()
+                        if type(sub) == "table" and sub[1] then sub[1].Visible = false else sub.Visible = false end
+                    end)
                 end
-            elseif drawing.Remove then drawing.Visible = false end
+            elseif drawing.Visible ~= nil then
+                pcall(function() drawing.Visible = false end)
+            end
         end
     end
 
@@ -211,7 +220,7 @@ local function StartESP()
                 if head then esp.CharCache.Head = head end
                 if humanoid then esp.CharCache.Hum = humanoid end
                 
-                if not (rootPart and head and humanoid) then hideEsp(esp) continue end
+                if not (rootPart and rootPart.Parent and head and humanoid) then hideEsp(esp) continue end
 
                 local isBehindWall = getgenv().WallCheck and humanoid.Health > 0 and (function()
                     local origin = camera.CFrame.Position
@@ -340,6 +349,7 @@ local function StartESP()
     -- Funciones de World ESP
     local function DrawWorldObject(obj, settings_flag, dist_flag, default_tag, color_default)
         local text = create("Text", {Center = true, Font = 2, Outline = true, Size = 13, Visible = false})
+        table.insert(ESP.WorldCache, text)
         local lastScan = 0
         local total, lootText, lootColor = 0, "", color_default
 
@@ -432,14 +442,17 @@ end
 
 function ESP:Unload()
     self.Enabled = false
-    for _, v in pairs(self.Connections) do v:Disconnect() end
+    for _, v in pairs(self.Connections) do pcall(function() v:Disconnect() end) end
+    for _, text in pairs(self.WorldCache) do pcall(function() text:Remove() end) end
+    
     for p, _ in pairs(self.Cache) do
         local esp = self.Cache[p]
         if esp then
-            for _, drawing in pairs(esp) do
+            for k, drawing in pairs(esp) do
+                if k == "CharCache" then continue end
                 if type(drawing) == "table" then
-                    for _, sub in pairs(drawing) do if sub.Remove then sub:Remove() end end
-                elseif drawing.Remove then drawing:Remove() end
+                    for _, sub in pairs(drawing) do pcall(function() if sub.Remove then sub:Remove() end end) end
+                elseif drawing.Remove then pcall(function() drawing:Remove() end) end
             end
         end
     end

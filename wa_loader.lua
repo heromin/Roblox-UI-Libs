@@ -1,13 +1,50 @@
 --Functions Load
 -- [ DEPENDENCIES ] --
-local Library     = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa.lua"))()
-local Combat      = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_aimbot%2Bsilentaim.lua"))()
-local CombatFuncs = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_hitimplementations.lua"))()
-local Inventory   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua"))()
-local esp         = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua"))()
-local NPCAimbot   = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua"))()
-local GunMods     = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_gunmods.lua"))()
-local LightingMod = loadstring(game:HttpGet("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_lightiningandmore.lua"))() -- Asumiendo carga local o remota
+local function safeLoad(url)
+    local success, content = pcall(game.HttpGet, game, url)
+    if not success then 
+        warn("[AMBER] Error de red al descargar: " .. url)
+        return nil 
+    end
+    
+    if content:find("404: Not Found") or content:find("Project not found") then
+        warn("[AMBER] El archivo no existe en GitHub (404): " .. url)
+        return nil
+    end
+
+    local func, err = loadstring(content)
+    if not func then
+        warn("[AMBER] Error de sintaxis en " .. url .. ": " .. tostring(err))
+        return nil
+    end
+
+    local ok, module = pcall(func)
+    if not ok then
+        warn("[AMBER] Error de ejecución en " .. url .. ": " .. tostring(module))
+        return nil
+    end
+    return module
+end
+
+local Library     = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa.lua")
+local Combat      = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_aimbot%2Bsilentaim.lua")
+local CombatFuncs = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_hitimplementations.lua")
+local Inventory   = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_inventoryviewer.lua")
+local esp         = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_esp.lua")
+local NPCAimbot   = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_NPCaimbot.lua")
+local GunMods     = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_gunmods.lua")
+local LightingMod = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_lightiningandmore.lua")
+
+-- [ ADVANCED EXPLOITS ] --
+local ResolverAdv = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_resolver%2Clua    ")
+local PerfectSil  = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_perfectsilent.lua")
+local FreezeT     = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_freezetarger.lua")
+local PeekK       = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_peekkill.lua")
+local UGRes       = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_ugresolver")
+local BossHUD     = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_bossinfo.lua")
+local MineMod     = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_nolandmines.lua")
+local VitalInd    = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_vitalindicator.lua")
+local SkyMod      = safeLoad("https://raw.githubusercontent.com/heromin/Roblox-UI-Libs/refs/heads/main/wa_skychanger.lua")
 
 -- [ SERVICES ] --
 local RunService = game:GetService("RunService")
@@ -16,8 +53,8 @@ local Players    = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 -- [ INITIALIZATION ] --
-Inventory:Init()
-esp:Init()
+if Inventory then Inventory:Init() end
+if esp then esp:Init() end
 local Watermark = Library:Watermark("amber.lol | " .. os.date("%b %d, %Y"))
 
 -- [ WINDOW CONFIGURATION ] --
@@ -39,6 +76,11 @@ local Aimbot_Section = TabCombat:AddSection("Aimbot", "Left")
 TabCombat:AddCheckbox(Aimbot_Section, "Enable Aimbot", false, function(state) getgenv().isAimbotEnabled = state end):AddKeybind(Enum.KeyCode.F)
 TabCombat:AddCheckbox(Aimbot_Section, "Silent Aim", false, function(state) getgenv().SilentAImUser = state end):AddKeybind(Enum.KeyCode.G)
 TabCombat:AddSlider(Aimbot_Section, "Smoothness", 1, 20, 1, function(val) getgenv().AimbotSmoothness = val end)
+
+local AdvCombat_Section = TabCombat:AddSection("Advanced Combat", "Left")
+TabCombat:AddCheckbox(AdvCombat_Section, "Advanced Resolver", false, function(s) getgenv().ResolverEnabled = s end)
+TabCombat:AddCheckbox(AdvCombat_Section, "Perfect Silent Aim", false, function(s) getgenv().PerfectSilentEnabled = s end)
+TabCombat:AddCheckbox(AdvCombat_Section, "Freeze Current Target", false, function(s) if FreezeT then FreezeT:Set(getgenv().CurrentTarget, s) end end)
 
 local Triggerbot_Section = TabCombat:AddSection("Triggerbot", "Right")
 TabCombat:AddCheckbox(Triggerbot_Section, "Enable Triggerbot", false, function(state) getgenv().TriggerbotEnabled = state end):AddKeybind(Enum.KeyCode.T)
@@ -83,6 +125,7 @@ TabESP:AddColorPicker(PlayerESP_Section, "Box Color", Color3.new(1,1,1), functio
 TabESP:AddCheckbox(PlayerESP_Section, "Health Bar", false, function(state) getgenv().ShowHealth = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Names", false, function(state) getgenv().ShowName = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Skeletons", false, function(state) getgenv().ShowSkeletons = state end)
+TabESP:AddCheckbox(PlayerESP_Section, "Gun ESP", false, function(state) getgenv().ShowGunESP = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Tracers", false, function(state) getgenv().ShowTracer = state end)
 TabESP:AddDropdown(PlayerESP_Section, "Tracer Origin", {"Bottom", "Top", "Mouse"}, "Bottom", function(val) getgenv().TracerOrigin = val end)
 TabESP:AddColorPicker(PlayerESP_Section, "Tracer Color", Color3.new(1,1,1), function(color) getgenv().TracerColor = color end)
@@ -90,6 +133,10 @@ TabESP:AddCheckbox(PlayerESP_Section, "Distance", false, function(state) getgenv
 TabESP:AddSlider(PlayerESP_Section, "Max Distance", 100, 5000, 2000, function(val) getgenv().MaxDistance = val end)
 TabESP:AddCheckbox(PlayerESP_Section, "Team Check", false, function(state) getgenv().TeamCheck = state end)
 TabESP:AddCheckbox(PlayerESP_Section, "Wall Check", false, function(state) getgenv().WallCheck = state end)
+
+local Indicators_Section = TabESP:AddSection("Indicators", "Right")
+TabESP:AddCheckbox(Indicators_Section, "Boss Information HUD", false, function(s) if BossHUD then BossHUD:SetEnabled(s) end end)
+TabESP:AddCheckbox(Indicators_Section, "Low Vital Indicator", false, function(s) if VitalInd then VitalInd.Enabled = s end end)
 
 local WorldESP_Section = TabESP:AddSection("Environment", "Right")
 TabESP:AddCheckbox(WorldESP_Section, "Container ESP", false, function(state) getgenv().ContainerESP = state end):AddKeybind(Enum.KeyCode.P)
@@ -184,6 +231,11 @@ TabWorld:AddCheckbox(Lighting_Section, "No Shadows", false, function(state) Ligh
 TabWorld:AddCheckbox(Lighting_Section, "Remove Grass", false, function(state) workspace.Terrain.Decoration = not state end)
 TabWorld:AddCheckbox(Lighting_Section, "Performance Mode", false, function(state) LightingMod:SetPerformanceMode(state) end)
 
+local Env_Section = TabWorld:AddSection("Exploit Environment", "Right")
+TabWorld:AddCheckbox(Env_Section, "No Landmines", false, function(s) if MineMod then MineMod:SetEnabled(s) end end)
+TabWorld:AddDropdown(Env_Section, "Skybox Preset", {"Default", "Galaxy", "Night", "Sunset"}, "Default", function(v) if SkyMod then SkyMod:SetPreset(v) end end)
+TabWorld:AddSlider(Env_Section, "Cloud Density", 0, 100, 20, function(v) if SkyMod then SkyMod:SetClouds(v/100) end end)
+
 -- ==========================================
 -- [ TAB: MOVEMENT ]
 -- ==========================================
@@ -224,6 +276,11 @@ TabMovement:AddSlider(MainMove_Section, "Fly Speed", 10, 500, 50, function(val) 
 TabMovement:AddCheckbox(MainMove_Section, "CFrame Speed", false, function(state) getgenv().CFrameSpeedEnabled = state end)
 TabMovement:AddSlider(MainMove_Section, "Speed Amount", 16, 200, 16, function(val) getgenv().CFrameSpeedValue = val end)
 TabMovement:AddCheckbox(MainMove_Section, "Spider (Wall Climb)", false, function(state) getgenv().SpiderEnabled = state end)
+
+local AdvMove_Section = TabMovement:AddSection("Advanced Movement", "Left")
+TabMovement:AddCheckbox(AdvMove_Section, "Peek Kill Enabled", false, function(s) getgenv().PeekKillEnabled = s end)
+TabMovement:AddKeybind(AdvMove_Section, "Peek Jump", Enum.KeyCode.Space, function() if PeekK then PeekK:Jump() end end)
+TabMovement:AddButton(AdvMove_Section, "UG Resolver (Clean State)", function() if UGRes then UGRes:Execute() end end)
 
 local ExtraMove_Section = TabMovement:AddSection("Extra", "Right")
 TabMovement:AddCheckbox(ExtraMove_Section, "Third Person", false, function(state) getgenv().ThirdPersonEnabled = state end):AddKeybind(Enum.KeyCode.C)
